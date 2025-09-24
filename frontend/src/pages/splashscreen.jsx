@@ -1,6 +1,4 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import "./splashscreen.css";
 
 const backgroundColor = "#144139ff";
 
@@ -76,7 +74,6 @@ export default function SplashScreen() {
             fontWeight: "bold",
             cursor: "pointer",
           }}
-          onClick={() => navigate("/login")} // optional if you have a login page
         >
           Login
         </button>
