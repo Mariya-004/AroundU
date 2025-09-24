@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import "./splashscreen.css"; // Make sure this CSS file contains your animations
 
 const backgroundColor = "#144139ff"; // Dark green background
 
@@ -14,7 +15,7 @@ export default function SplashScreen() {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "space-between", // center content with buttons at bottom
+        justifyContent: "space-between",
         padding: "40px 20px",
         color: "white",
         textAlign: "center",
@@ -37,6 +38,7 @@ export default function SplashScreen() {
       {/* Services */}
       <div style={{ maxWidth: "700px", marginBottom: "50px" }}>
         <h2
+          className="fade-in"
           style={{
             fontSize: "2rem",
             marginBottom: "20px",
@@ -47,12 +49,13 @@ export default function SplashScreen() {
           🌟 Our Services
         </h2>
         <ul
+          className="service-list"
           style={{
             listStyle: "none",
             padding: 0,
             fontSize: "1.4rem",
             lineHeight: "2.2",
-            fontFamily: "'Raleway', sans-serif", // Stylish font applied here
+            fontFamily: "'Raleway', sans-serif",
             fontWeight: "500",
           }}
         >
@@ -77,7 +80,7 @@ export default function SplashScreen() {
             fontWeight: "bold",
             cursor: "pointer",
           }}
-          onClick={() => navigate('/login')}
+          onClick={() => navigate("/login")}
         >
           Login
         </button>
@@ -92,7 +95,7 @@ export default function SplashScreen() {
             cursor: "pointer",
             border: "2px solid #C8A46B",
           }}
-            onClick={() => navigate('/signup')}
+          onClick={() => navigate("/signup")}
         >
           Signup
         </button>
