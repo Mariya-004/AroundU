@@ -32,7 +32,7 @@ app.get('/', (req, res) => {
 // Signup Route
 // ----------------------------
 app.post('/api/auth/signup', async (req, res) => {
-  const { name, email, password, role, address, location } = req.body;
+  const { name, email, password, role } = req.body;
 
   try {
     // Check if user exists
@@ -40,7 +40,7 @@ app.post('/api/auth/signup', async (req, res) => {
     if (user) return res.status(400).json({ msg: 'User already exists' });
 
     // Create user
-    user = new User({ name, email, password, role, address, location });
+    user = new User({ name, email, password, role});
     await user.save();
 
     // Generate JWT
