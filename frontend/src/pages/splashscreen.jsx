@@ -1,25 +1,59 @@
-import React from "react";
+import React from 'react';
+
+const backgroundColor = '#144139ff'; // Use the dark green from your logo
 
 export default function SplashScreen() {
   return (
-    <div className="bg-background-light dark:bg-background-dark font-display text-slate-800 dark:text-slate-200 min-h-screen flex flex-col items-center justify-center">
-      <main className="flex flex-col items-center justify-center min-h-screen">
-        <div className="w-full max-w-sm p-8 text-center">
-          {/* Logo */}
-          <div className="mb-8">
-            <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuAICVhEO1PASk40osEgTDAz2QtRHVal4SJcFDzDEikjoM6JS5a_wXHcVfS2zubXQQtg47ALjCuIwuXjPdDQyxwvfCAHFidyf8Fvt5TDRLAefUuc-UbpTXZl2M7amUP9NLzTlhtx4H_L9OyggLUOAJqumqcNjbi9NJFQ7dRswnlFFftloM_zssAx7zs6DNujMbjtJrPCkF1S6eP5jmfUcF61lMfgdcTrr49ZdBPxEInWt1JKztgyePS_WVby4PZyMJIVJYUNhrgduQ_J"
-              alt="AroundU Logo"
-              className="mx-auto w-40 h-40"
-            />
-          </div>
-
-          {/* Heading */}
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-            Shop Local. Live Better.
-          </h1>
-        </div>
-      </main>
+    <div
+      style={{
+        background: backgroundColor,
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+      }}
+    >
+      <img
+        src={'LOGO.png'}
+        alt="AroundU Logo"
+        style={{
+          marginTop: '40px',
+          width: '350px',
+          maxWidth: '80vw',
+        }}
+      />
+      <div style={{ marginTop: '60px', display: 'flex', gap: '20px' }}>
+        <button
+          style={{
+            padding: '12px 32px',
+            fontSize: '1.2rem',
+            borderRadius: '8px',
+            border: 'none',
+            background: '#C8A46B',
+            color: '#184C43',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+          }}
+        >
+          Login
+        </button>
+        <button
+          style={{
+            padding: '12px 32px',
+            fontSize: '1.2rem',
+            borderRadius: '8px',
+            border: 'none',
+            background: '#184C43',
+            color: '#C8A46B',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            border: '2px solid #C8A46B',
+          }}
+        >
+          Signup
+        </button>
+      </div>
     </div>
   );
 }
