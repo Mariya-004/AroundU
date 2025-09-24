@@ -1,0 +1,42 @@
+/* Fade-in for heading */
+.fade-in {
+  opacity: 0;
+  animation: fadeIn 1.5s ease-in forwards;
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Slide-up animation for service list */
+.service-list li {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: slideUp 0.8s ease-out forwards;
+}
+
+/* Delay each item */
+.service-list li:nth-child(1) {
+  animation-delay: 0.3s;
+}
+.service-list li:nth-child(2) {
+  animation-delay: 0.6s;
+}
+.service-list li:nth-child(3) {
+  animation-delay: 0.9s;
+}
+.service-list li:nth-child(4) {
+  animation-delay: 1.2s;
+}
+.service-list li:nth-child(5) {
+  animation-delay: 1.5s;
+}
+
+@keyframes slideUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
