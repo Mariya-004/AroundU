@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -10,6 +11,7 @@ export default function SignupPage() {
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const navigate = useNavigate(); // Initialize navigate
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -17,6 +19,13 @@ export default function SignupPage() {
       [e.target.name]: e.target.value,
     }));
   };
+
+  // Normalize role values to match backend expectations
+  const roleOptions = [
+    { label: "customer", value: "customer" },
+    { label: "shopkeeper", value: "shopkeeper" },
+    { label: "delivery Agent", value: "deliveryagent" },
+  ];
 
   const handleRoleSelect = (role) => {
     setFormData((prev) => ({ ...prev, role }));
@@ -27,8 +36,14 @@ export default function SignupPage() {
     setError("");
     setSuccess("");
 
+    // Validate role selection
+    if (!formData.role) {
+      setError("Please select a role.");
+      return;
+    }
+
     try {
-      const res = await fetch("/api/auth/signup", {
+      const res = await fetch("http://localhost:5000/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -42,6 +57,10 @@ export default function SignupPage() {
         setSuccess("Signup successful!");
         console.log("Token:", data.token);
         console.log("User:", data.user);
+        // Redirect to login after short delay
+        setTimeout(() => {
+          navigate("/login");
+        }, 1200);
       }
     } catch (err) {
       setError("Server error");
@@ -127,22 +146,22 @@ export default function SignupPage() {
           <div>
             <p style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "10px" }}>I am a...</p>
             <div style={{ display: "flex", gap: "15px", justifyContent: "center" }}>
-              {["Customer", "Shopkeeper", "Delivery Agent"].map((role) => (
+              {roleOptions.map((roleObj) => (
                 <button
-                  key={role}
+                  key={roleObj.value}
                   type="button"
-                  onClick={() => handleRoleSelect(role)}
+                  onClick={() => handleRoleSelect(roleObj.value)}
                   style={{
                     padding: "10px 20px",
                     borderRadius: "10px",
-                    border: formData.role === role ? "2px solid #144139" : "1px solid #ccc",
-                    background: formData.role === role ? "#C8A46B" : "#ffffff",
-                    color: formData.role === role ? "#144139" : "#333",
+                    border: formData.role === roleObj.value ? "2px solid #144139" : "1px solid #ccc",
+                    background: formData.role === roleObj.value ? "#C8A46B" : "#ffffff",
+                    color: formData.role === roleObj.value ? "#144139" : "#333",
                     fontWeight: "bold",
                     cursor: "pointer",
                   }}
                 >
-                  {role}
+                  {roleObj.label}
                 </button>
               ))}
             </div>
@@ -171,7 +190,7 @@ export default function SignupPage() {
 
         <div style={{ marginTop: "20px" }}>
           <a href="/login" style={{ color: "#144139", fontWeight: "500", textDecoration: "underline" }}>
-            Already have an account? Sign in
+            Already have an account? Log in
           </a>
         </div>
       </div>

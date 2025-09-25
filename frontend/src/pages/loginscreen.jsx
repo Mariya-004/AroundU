@@ -173,7 +173,7 @@ export default function LoginScreen() {
           <button
             type="submit"
             disabled={loading}
-            disabled={loading}
+            
             style={{
               background: '#19c37d',
               color: '#fff',
