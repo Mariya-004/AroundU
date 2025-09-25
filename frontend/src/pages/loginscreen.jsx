@@ -63,8 +63,7 @@ export default function LoginScreen() {
         </div>
         <nav style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
           <a href="#" style={{ color: '#222', textDecoration: 'none', fontWeight: 500 }}>Home</a>
-          <a href="#" style={{ color: '#222', textDecoration: 'none', fontWeight: 500 }}>About</a>
-          <a href="#" style={{ color: '#222', textDecoration: 'none', fontWeight: 500 }}>Contact</a>
+          {/* <a href="#" style={{ color: '#222', textDecoration: 'none', fontWeight: 500 }}>Contact</a> */}
           <button
             style={{
               background: '#19c37d',
