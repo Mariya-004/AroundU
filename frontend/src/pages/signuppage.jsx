@@ -22,10 +22,10 @@ export default function SignupPage() {
 
   // Normalize role values to match backend expectations
   const roleOptions = [
-    { label: "customer", value: "customer" },
-    { label: "shopkeeper", value: "shopkeeper" },
-    { label: "delivery Agent", value: "deliveryagent" },
-  ];
+  { label: "customer", value: "customer" },
+  { label: "shopkeeper", value: "shopkeeper" },
+  { label: "delivery agent", value: "delivery_agent" },
+];
 
   const handleRoleSelect = (role) => {
     setFormData((prev) => ({ ...prev, role }));

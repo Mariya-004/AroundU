@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 
-
-const roles = ['Customer', 'Shop Owner'];
+const roles = ['customer', 'shopkeeper', 'delivery_agent'];
 
 export default function LoginScreen() {
-  const [role, setRole] = useState('Customer');
+  const [role, setRole] = useState('customer');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -28,8 +27,16 @@ export default function LoginScreen() {
         setError(data.msg || 'Login failed');
       } else {
         localStorage.setItem('token', data.token);
-        navigate('/');
+         if (data.user.role === 'customer') {
+        navigate('/customer-dashboard');
+      } else if (data.user.role === 'shopkeeper') {
+        navigate('/shopkeeper-dashboard');
+      } else if (data.user.role === 'delivery_agent') {
+        navigate('/delivery-dashboard');
+      } else {
+        navigate('/'); // fallback
       }
+    }
     } catch (err) {
       setError('Server error');
     }
