@@ -27,7 +27,7 @@ export default function LoginScreen() {
         setError(data.msg || 'Login failed');
       } else {
         localStorage.setItem('token', data.token);
-         if (data.user.role === 'customer') {
+         /*if (data.user.role === 'customer') {
         navigate('/customer-dashboard');
       } else if (data.user.role === 'shopkeeper') {
         navigate('/shopkeeper-dashboard');
@@ -35,7 +35,7 @@ export default function LoginScreen() {
         navigate('/delivery-dashboard');
       } else {
         navigate('/'); // fallback
-      }
+      }*/
     }
     } catch (err) {
       setError('Server error');
