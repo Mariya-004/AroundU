@@ -10,12 +10,15 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState('');
   const navigate = useNavigate();
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccess('');
     try {
       const res = await fetch('https://aroundu-164909903360.asia-south1.run.app/api/auth/login', {
         method: 'POST',
@@ -27,15 +30,20 @@ export default function LoginScreen() {
         setError(data.msg || 'Login failed');
       } else {
         localStorage.setItem('token', data.token);
-         /*if (data.user.role === 'customer') {
-        navigate('/customer-dashboard');
-      } else if (data.user.role === 'shopkeeper') {
-        navigate('/shopkeeper-dashboard');
-      } else if (data.user.role === 'delivery_agent') {
-        navigate('/delivery-dashboard');
-      } else {
-        navigate('/'); // fallback
-      }*/
+        localStorage.setItem('user', JSON.stringify(data.user));
+        console.log('Logged in user:', data.user); // Log user details to console
+        setSuccess('Login successful!'); // Show success message
+        /*setTimeout(() => {
+          if (data.user.role === 'customer') {
+            navigate('/customer-dashboard');
+          } else if (data.user.role === 'shopkeeper') {
+            navigate('/shopkeeper-dashboard');
+          } else if (data.user.role === 'delivery_agent') {
+            navigate('/delivery-dashboard');
+          } else {
+            navigate('/'); // fallback
+          }
+        }, 1200);*/
     }
     } catch (err) {
       setError('Server error');
@@ -70,8 +78,8 @@ export default function LoginScreen() {
         </div>
         <nav style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
           <a href="#" style={{ color: '#222', textDecoration: 'none', fontWeight: 500 }}>Home</a>
-          <a href="#" style={{ color: '#222', textDecoration: 'none', fontWeight: 500 }}>About</a>
-          <a href="#" style={{ color: '#222', textDecoration: 'none', fontWeight: 500 }}>Contact</a>
+          {/*<a href="#" style={{ color: '#222', textDecoration: 'none', fontWeight: 500 }}>About</a>*/}
+          {/*<a href="#" style={{ color: '#222', textDecoration: 'none', fontWeight: 500 }}>Contact</a>*/}
           <button
             style={{
               background: '#19c37d',
@@ -177,6 +185,7 @@ export default function LoginScreen() {
             }}
           />
           {error && <div style={{ color: 'red', marginBottom: 10, fontSize: 14 }}>{error}</div>}
+          {success && <div style={{ color: 'green', marginBottom: 10, fontSize: 14 }}>{success}</div>}
           <button
             type="submit"
             disabled={loading}
