@@ -9,7 +9,7 @@ steps:
       - '--gen2'
       - '--runtime=nodejs22'
       - '--region=asia-south1' # <-- Change to your region
-      - '--source=./functions/signup'
+      - '--source=./backend/functions/signup'
       - '--entry-point=signup'
       - '--trigger-http'
       - '--allow-unauthenticated'
@@ -25,7 +25,7 @@ steps:
       - '--gen2'
       - '--runtime=nodejs22'
       - '--region=asia-south1' # <-- Change to your region
-      - '--source=./functions/login'
+      - '--source=./backend/functions/login'
       - '--entry-point=login'
       - '--trigger-http'
       - '--allow-unauthenticated'
