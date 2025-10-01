@@ -2,6 +2,7 @@ steps:
   # Deploy the 'signup' function
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     args:
+      - 'gcloud'
       - 'functions'
       - 'deploy'
       - 'signup'
@@ -17,6 +18,7 @@ steps:
   # Deploy the 'login' function
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     args:
+      - 'gcloud'
       - 'functions'
       - 'deploy'
       - 'login'
