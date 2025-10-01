@@ -1,0 +1,30 @@
+steps:
+  # Deploy the 'signup' function
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'functions'
+      - 'deploy'
+      - 'signup'
+      - '--gen2'
+      - '--runtime=nodejs22'
+      - '--region=asia-south1' # <-- Change to your region
+      - '--source=./functions/signup'
+      - '--entry-point=signup'
+      - '--trigger-http'
+      - '--allow-unauthenticated'
+      - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET'
+
+  # Deploy the 'login' function
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'functions'
+      - 'deploy'
+      - 'login'
+      - '--gen2'
+      - '--runtime=nodejs22'
+      - '--region=asia-south1' # <-- Change to your region
+      - '--source=./functions/login'
+      - '--entry-point=login'
+      - '--trigger-http'
+      - '--allow-unauthenticated'
+      - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET'
