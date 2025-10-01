@@ -28,3 +28,5 @@ steps:
       - '--trigger-http'
       - '--allow-unauthenticated'
       - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET'
+options:
+  logging: CLOUD_LOGGING_ONLY
