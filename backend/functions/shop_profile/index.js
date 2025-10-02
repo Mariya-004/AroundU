@@ -11,11 +11,6 @@ const app = express();
 app.use(cors({ origin: true }));
 app.use(express.json());
 
-/**
- * @route   POST /
- * @desc    Create or update a shop profile for a logged-in shopkeeper
- * @access  Private (Requires JWT authentication)
- */
 app.post('/', auth, async (req, res) => {
   await connectDB();
   const {
@@ -34,11 +29,13 @@ app.post('/', auth, async (req, res) => {
       return res.status(403).json({ msg: 'Forbidden: User is not a shopkeeper.' });
     }
 
-    let shop = await Shop.findOne({ owner: userId });
+    // --- FIX: Use 'shopkeeperId' instead of 'owner' ---
+    let shop = await Shop.findOne({ shopkeeperId: userId });
 
     if (shop) {
       shop = await Shop.findOneAndUpdate(
-        { owner: userId },
+        // --- FIX: Use 'shopkeeperId' instead of 'owner' ---
+        { shopkeeperId: userId },
         {
           $set: {
             name: shopName,
@@ -55,7 +52,8 @@ app.post('/', auth, async (req, res) => {
     }
 
     shop = new Shop({
-      owner: userId,
+      // --- FIX: Use 'shopkeeperId' instead of 'owner' ---
+      shopkeeperId: userId,
       name: shopName,
       address: shopAddress,
       location: shopLocation,
@@ -67,21 +65,9 @@ app.post('/', auth, async (req, res) => {
     await shop.save();
     res.status(201).json({ msg: 'Shop profile created successfully', shop });
   } catch (err) {
-    console.error(err);
+    console.error("Error details:", err); // Enhanced logging
     res.status(500).send('Server error');
   }
 });
 
-// --- START: ADDED THIS SECTION ---
-// The PORT environment variable is provided by Cloud Run.
-/*const port = process.env.PORT || 8080;
-app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
-});
-// --- END: ADDED THIS SECTION ---
-*/
-
-// The export name MUST match the --entry-point in your deployment command.
-// Renaming this to 'shop_profile_app' to avoid conflict with the function name.
-// Note: If your entry point is 'registerShop', this should be 'exports.registerShop = app'
 exports.shop_profile = app;
