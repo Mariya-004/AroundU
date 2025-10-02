@@ -42,7 +42,7 @@ steps:
       - '--runtime=nodejs22'
       - '--region=asia-south1' # <-- Change to your region
       - '--source=./backend/functions/shop_profile'
-      - '--entry-point=shop_profile'
+      - '--entry-point=registerShop'
       - '--trigger-http'
       - '--allow-unauthenticated'
       - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET'
