@@ -3,7 +3,7 @@ const cors = require('cors');
 const connectDB = require('./common/db.js');
 const Shop = require('./common/models/Shop.js');
 const User = require('./common/models/User.js');
-const auth = require('./common/middleware/auth.js');
+const auth = require('./common/authMiddleware.js');
 
 const app = express();
 
