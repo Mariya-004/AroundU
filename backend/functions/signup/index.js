@@ -1,3 +1,4 @@
+console.log("✅ Signup function is loading...");
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
