@@ -1,25 +1,33 @@
 // common/db.js
 const mongoose = require('mongoose');
 
-// Cache the database connection to reuse it across function invocations
 let cachedDb = null;
 
 const connectDB = async () => {
+  console.log("Attempting to connect to the database...");
+
   if (cachedDb) {
+    console.log("Reusing cached database connection.");
     return cachedDb;
   }
 
+  const mongoUri = process.env.MONGO_URI;
+  if (!mongoUri) {
+    console.error("FATAL ERROR: MONGO_URI environment variable is not set.");
+    // This will cause the function to fail loudly if the variable is missing
+    throw new Error("MONGO_URI is not defined.");
+  }
+
+  console.log("MONGO_URI is present. Attempting mongoose.connect...");
+
   try {
-    // The new Mongoose versions do not need the old options
-    const conn = await mongoose.connect(process.env.MONGO_URI);
-    
+    const conn = await mongoose.connect(mongoUri);
     cachedDb = conn;
-    console.log('MongoDB connected');
+    console.log("✅ MongoDB successfully connected.");
     return cachedDb;
-    
+
   } catch (err) {
-    // In a serverless function, we should throw an error, not exit the process
-    console.error('Database connection error:', err);
+    console.error("❌ Database connection failed. Error details:", err);
     throw new Error('Could not connect to the database.');
   }
 };
