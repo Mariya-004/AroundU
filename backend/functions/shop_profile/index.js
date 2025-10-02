@@ -2,10 +2,10 @@ const express = require('express');
 const cors = require('cors');
 
 // Import shared modules
-const connectDB = require('../common/db.js');
-const Shop = require('../common/models/Shop.js');
-const User = require('../common/models/User.js');
-const auth = require('../common/middleware/auth.js');
+const connectDB = require('./common/db.js');
+const Shop = require('./common/models/Shop.js');
+const User = require('./common/models/User.js');
+const auth = require('./common/middleware/auth.js');
 
 const app = express();
 
