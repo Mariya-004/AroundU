@@ -74,12 +74,12 @@ app.post('/', auth, async (req, res) => {
 
 // --- START: ADDED THIS SECTION ---
 // The PORT environment variable is provided by Cloud Run.
-const port = process.env.PORT || 8080;
+/*const port = process.env.PORT || 8080;
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
 // --- END: ADDED THIS SECTION ---
-
+*/
 
 // The export name MUST match the --entry-point in your deployment command.
 // Renaming this to 'shop_profile_app' to avoid conflict with the function name.
