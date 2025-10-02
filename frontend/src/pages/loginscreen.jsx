@@ -20,7 +20,7 @@ export default function LoginScreen() {
     setError('');
     setSuccess('');
     try {
-      const res = await fetch('https://aroundu-164909903360.asia-south1.run.app/api/auth/login', {
+      const res = await fetch('https://asia-south1-aroundu-473113.cloudfunctions.net/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, role }),
