@@ -14,35 +14,43 @@ const app = express();
 app.use(cors({ origin: true }));
 app.use(express.json());
 
-// The path should be '/' because API Gateway handles the full URL
+// The path should be '/' because the function URL itself is the base path
 app.post('/', async (req, res) => {
-  // ✅ Connect to the database INSIDE the handler
-  await connectDB();
-
-  const { name, email, password, role } = req.body;
-
   try {
+    // Connect to the database INSIDE the handler
+    await connectDB();
+
+    const { name, email, password, role } = req.body;
+
     let user = await User.findOne({ email });
-    if (user) return res.status(400).json({ msg: 'User already exists' });
+    if (user) {
+      return res.status(400).json({ msg: 'User already exists' });
+    }
 
     user = new User({ name, email, password, role });
     await user.save();
 
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
     res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+
   } catch (err) {
-    console.error(err);
+    console.error('Error during user signup:', err);
     res.status(500).send('Server error');
   }
 });
 
-// The export is correct
+
+// ✅ **CRITICAL PART FOR DEPLOYMENT** ✅
+// This line exports your express app for Google Cloud Functions
 exports.signup = app;
-// ✅ ADD THIS BLOCK TO THE END OF THE FILE
-// This allows the function to run as a local server for testing
-/*if (require.main === module) {
+
+
+// ✅ **CRITICAL PART FOR LOCAL TESTING** ✅
+// This block only runs when you execute "node index.js" directly
+// It will NOT run when the code is deployed to Cloud Functions
+if (require.main === module) {
   const port = process.env.PORT || 8080;
   app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
   });
-}*/
+}
