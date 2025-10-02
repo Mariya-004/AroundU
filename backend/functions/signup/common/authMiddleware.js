@@ -1,21 +1,25 @@
-// common/authMiddleware.js
-
-// 1. Add this require statement at the top
 const jwt = require('jsonwebtoken');
 
-// This is your original code
 const authMiddleware = (req, res, next) => {
-  const token = req.header('x-auth-token');
-  if (!token) return res.status(401).json({ msg: 'No token, authorization denied' });
+  // 1. Get token from the standard Authorization header
+  const authHeader = req.header('Authorization');
+
+  // 2. Check if header exists and is in the correct format ('Bearer <token>')
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ msg: 'No token or invalid format, authorization denied' });
+  }
 
   try {
+    // 3. Extract the token from 'Bearer <token>'
+    const token = authHeader.split(' ')[1];
+
+    // 4. Verify the token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
+    req.user = decoded; // Attach user payload to request
+    next(); // Proceed to the next middleware/route handler
   } catch (err) {
     res.status(401).json({ msg: 'Token is not valid' });
   }
 };
 
-// 2. Add this export statement at the bottom
 module.exports = authMiddleware;
