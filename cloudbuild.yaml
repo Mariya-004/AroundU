@@ -30,5 +30,21 @@ steps:
       - '--trigger-http'
       - '--allow-unauthenticated'
       - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET'
+
+  # Deploy the 'shop-profile' function
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'gcloud'
+      - 'functions'
+      - 'deploy'
+      - 'shop-profile'
+      - '--gen2'
+      - '--runtime=nodejs22'
+      - '--region=asia-south1' # <-- Change to your region
+      - '--source=./backend/functions/shop_profile'
+      - '--entry-point=shop_profile'
+      - '--trigger-http'
+      - '--allow-unauthenticated'
+      - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET'
 options:
   logging: CLOUD_LOGGING_ONLY

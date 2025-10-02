@@ -1,0 +1,21 @@
+[debug] [2025-09-25T18:27:01.852Z] ----------------------------------------------------------------------
+[debug] [2025-09-25T18:27:01.858Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\alina\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js init hosting
+[debug] [2025-09-25T18:27:01.859Z] CLI Version:   14.17.0
+[debug] [2025-09-25T18:27:01.859Z] Platform:      win32
+[debug] [2025-09-25T18:27:01.859Z] Node Version:  v22.11.0
+[debug] [2025-09-25T18:27:01.860Z] Time:          Thu Sep 25 2025 23:57:01 GMT+0530 (India Standard Time)
+[debug] [2025-09-25T18:27:01.860Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-09-25T18:27:01.872Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-09-25T18:27:01.873Z] > authorizing via signed-in user (alinagrg03@gmail.com)
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  D:\OneDrive\Desktop\AroundU\frontend
+
