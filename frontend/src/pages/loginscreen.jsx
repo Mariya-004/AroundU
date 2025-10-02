@@ -32,6 +32,7 @@ export default function LoginScreen() {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         console.log('Logged in user:', data.user); // Log user details to console
+        console.log('Full response from server:', data); // This will show both token and user
         setSuccess('Login successful!'); // Show success message
         /*setTimeout(() => {
           if (data.user.role === 'customer') {
