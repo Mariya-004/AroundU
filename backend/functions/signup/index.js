@@ -39,9 +39,9 @@ app.post('/', async (req, res) => {
 exports.signup = app;
 // ✅ ADD THIS BLOCK TO THE END OF THE FILE
 // This allows the function to run as a local server for testing
-if (require.main === module) {
+/*if (require.main === module) {
   const port = process.env.PORT || 8080;
   app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
   });
-}
+}*/
