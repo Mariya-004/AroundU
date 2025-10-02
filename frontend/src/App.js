@@ -6,6 +6,7 @@ import SignupPage from "./pages/signuppage";
 import CustomerDashboard from "./pages/customerdashboard";
 import ShopkeeperDashboard from "./pages/shopkeeperdashboard";
 import DeliveryAgentDashboard from "./pages/deliveryagentdashboard";
+import ShopkeeperProfileSetup from "./pages/shopkeepersetprofile";
 function App() {
   return (
     <Router>
@@ -16,6 +17,7 @@ function App() {
         <Route path="/customer-dashboard" element={<CustomerDashboard />} />
         <Route path="/shopkeeper-dashboard" element={<ShopkeeperDashboard />} />
         <Route path="/delivery-dashboard" element={<DeliveryAgentDashboard />} />
+        <Route path="/shopkeeper-setup-profile" element={<ShopkeeperProfileSetup />} />
         {/* ...other routes... */}
       </Routes>
     </Router>

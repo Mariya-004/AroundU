@@ -1,6 +1,9 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function ShopkeeperDashboard() {
+  const navigate = useNavigate();
+
   const stats = {
     totalSales: "$2,450",
     totalOrders: 32,
@@ -19,6 +22,21 @@ export default function ShopkeeperDashboard() {
   return (
     <div style={{ background: "#fff", minHeight: "100vh", padding: "30px", fontFamily: "Poppins, sans-serif", color: "#144139" }}>
       <h2 style={{ fontSize: "1.8rem", marginBottom: "20px" }}>Shopkeeper Dashboard</h2>
+
+      {/* Setup Profile Button */}
+      <div style={{ marginBottom: "20px" }}>
+        <button
+          style={{
+            ...actionBtnStyle,
+            background: "#C8A46B",
+            color: "#144139",
+            marginBottom: "10px"
+          }}
+          onClick={() => navigate("/shopkeeper-setup-profile")}
+        >
+          Set Up Your Profile
+        </button>
+      </div>
 
       {/* Stats */}
       <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", marginBottom: "30px" }}>

@@ -33,7 +33,7 @@ export default function LoginScreen() {
         localStorage.setItem('user', JSON.stringify(data.user));
         console.log('Logged in user:', data.user); // Log user details to console
         setSuccess('Login successful!'); // Show success message
-        /*setTimeout(() => {
+        setTimeout(() => {
           if (data.user.role === 'customer') {
             navigate('/customer-dashboard');
           } else if (data.user.role === 'shopkeeper') {
@@ -43,8 +43,8 @@ export default function LoginScreen() {
           } else {
             navigate('/'); // fallback
           }
-        }, 1200);*/
-    }
+        }, 1200);
+      }
     } catch (err) {
       setError('Server error');
     }
