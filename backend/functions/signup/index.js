@@ -5,8 +5,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 // Correctly import from the common folder
-const connectDB = require('../../common/db.js');
-const User = require('../../common/models/User.js');
+const connectDB = require('./common/db.js');
+const User = require('./common/models/User.js');
 
 const app = express();
 
