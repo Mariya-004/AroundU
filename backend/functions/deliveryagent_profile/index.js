@@ -29,7 +29,6 @@ app.post('/', auth, async (req, res) => {
 
   const {
     fullName,
-    email,
     phoneNumber,
     vehicleType,
     currentLocation // Can be an address string or [lon, lat] array
@@ -52,7 +51,6 @@ app.post('/', auth, async (req, res) => {
     // 2. Prepare fields for update
     const fieldsToUpdate = {};
     if (fullName) fieldsToUpdate.name = fullName;
-    if (email) fieldsToUpdate.email = email;
     if (phoneNumber) fieldsToUpdate.phoneNumber = phoneNumber;
     if (vehicleType) fieldsToUpdate.vehicleType = vehicleType;
     
