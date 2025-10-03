@@ -8,6 +8,7 @@ import ShopkeeperDashboard from "./pages/shopkeeperdashboard";
 import DeliveryAgentDashboard from "./pages/deliveryagentdashboard";
 import ShopkeeperProfileSetup from "./pages/shopkeepersetprofile";
 import DeliveryAgentProfileSetup from "./pages/deliveryagentsetprofile";
+import CustomerProfile from "./pages/customerProfile";
 function App() {
   return (
     <Router>
@@ -20,6 +21,7 @@ function App() {
         <Route path="/delivery-dashboard" element={<DeliveryAgentDashboard />} />
         <Route path="/shopkeeper-setup-profile" element={<ShopkeeperProfileSetup />} />
         <Route path="/deliveryagent-setprofile" element={<DeliveryAgentProfileSetup />} />
+        <Route path="/customer-profile" element={<CustomerProfile />} />
         {/* ...other routes... */}
       </Routes>
     </Router>

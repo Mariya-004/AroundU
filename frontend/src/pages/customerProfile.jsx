@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 
 export default function CustomerProfile() {
   const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [homeAddress, setHomeAddress] = useState('');
   const [loading, setLoading] = useState(false);
@@ -22,9 +21,9 @@ export default function CustomerProfile() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-auth-token': token
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ fullName, email, phoneNumber, homeAddress }),
+        body: JSON.stringify({ fullName, phoneNumber, homeAddress }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -113,22 +112,6 @@ export default function CustomerProfile() {
             placeholder="Full Name"
             value={fullName}
             onChange={e => setFullName(e.target.value)}
-            required
-            style={{
-              marginBottom: 18,
-              padding: '14px 16px',
-              borderRadius: 10,
-              border: '1.5px solid #e4e4e4',
-              background: '#fafcfa',
-              fontSize: 16,
-              outline: 'none'
-            }}
-          />
-          <input
-            type="email"
-            placeholder="Email Address"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
             required
             style={{
               marginBottom: 18,

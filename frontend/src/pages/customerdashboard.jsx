@@ -1,6 +1,8 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function CustomerDashboard() {
+  const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user"));
   const userName = user?.name || "Guest";
 
@@ -16,6 +18,23 @@ export default function CustomerDashboard() {
     >
       {/* Greeting */}
       <h2 style={{ fontSize: "1.8rem", marginBottom: "20px" }}>Hi {userName} 👋</h2>
+
+      {/* Profile Setup Button */}
+      <button
+        style={{
+          marginBottom: "20px",
+          padding: "10px 20px",
+          background: "#C8A46B",
+          color: "#144139",
+          border: "none",
+          borderRadius: "8px",
+          cursor: "pointer",
+          fontWeight: "bold",
+        }}
+        onClick={() => navigate("/customer-profile")}
+      >
+        Profile Setup
+      </button>
 
       {/* Search Bar */}
       <input
