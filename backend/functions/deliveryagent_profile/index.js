@@ -15,7 +15,7 @@ app.use(express.json());
  * @desc    Update a delivery agent's profile
  * @access  Private (Requires delivery agent role)
  */
-app.post('/agent/profile', auth, async (req, res) => {
+app.post('/', auth, async (req, res) => {
   await connectDB();
 
   const {
