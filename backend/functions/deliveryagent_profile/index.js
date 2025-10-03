@@ -10,7 +10,7 @@ const app = express();
 // Middleware // Apply CORS and JSON parsing
 app.use(cors({ origin: true }));
 app.use(express.json());
-
+// --- START: GEOCODER SETUP ---
 const options = {
  // provider: process.env.GEOCODER_PROVIDER || 'openstreetmap', // Use openstreetmap as a default provider
  // apiKey: process.env.GEOCODER_API_KEY, 
