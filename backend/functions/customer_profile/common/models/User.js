@@ -6,11 +6,12 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, enum: ['customer', 'shopkeeper', 'delivery_agent'], required: true },
+  phoneNumber: { type: String }, // Added phone number
+  address: { type: String }, // Can store homeAddress
   location: {
     type: { type: String, enum: ['Point'], default: 'Point' },
     coordinates: { type: [Number], default: [0, 0] } // [longitude, latitude]
-  },
-  address: { type: String }, // optional manual address
+  }
 }, { timestamps: true });
 
 // Hash password before saving
