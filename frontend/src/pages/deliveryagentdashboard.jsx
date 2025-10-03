@@ -1,6 +1,9 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function DeliveryAgentDashboard() {
+  const navigate = useNavigate();
+
   const stats = {
     todaysEarnings: "$45.50",
     totalDeliveries: 21,
@@ -23,6 +26,21 @@ export default function DeliveryAgentDashboard() {
   return (
     <div style={{ background: "#fff", minHeight: "100vh", padding: "30px", fontFamily: "Poppins, sans-serif", color: "#144139" }}>
       <h2 style={{ fontSize: "1.8rem", marginBottom: "20px" }}>Delivery Agent Dashboard</h2>
+
+      {/* Set Profile Button */}
+      <div style={{ marginBottom: "20px" }}>
+        <button
+          style={{
+            ...actionBtnStyle,
+            background: "#C8A46B",
+            color: "#144139",
+            marginBottom: "10px"
+          }}
+          onClick={() => navigate("/deliveryagent-setprofile")}
+        >
+          Set Profile
+        </button>
+      </div>
 
       {/* Stats */}
       <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", marginBottom: "30px" }}>
