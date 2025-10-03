@@ -3,7 +3,6 @@ import React, { useState } from "react";
 export default function DeliveryAgentProfileSetup() {
   const [formData, setFormData] = useState({
     fullName: "",
-    email: "",
     phoneNumber: "",
     vehicleType: "Bike",
     currentLocation: "", // address string or [lon, lat]
@@ -52,15 +51,6 @@ export default function DeliveryAgentProfileSetup() {
           name="fullName"
           placeholder="Full Name"
           value={formData.fullName}
-          onChange={handleChange}
-          required
-          style={inputStyle}
-        />
-        <input
-          type="email"
-          name="email"
-          placeholder="Email Address"
-          value={formData.email}
           onChange={handleChange}
           required
           style={inputStyle}
