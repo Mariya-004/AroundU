@@ -7,23 +7,24 @@ const NodeGeocoder = require('node-geocoder');
 
 const app = express();
 
-// Middleware // Apply CORS and JSON parsing
+// Middleware
 app.use(cors({ origin: true }));
 app.use(express.json());
+
 // --- START: GEOCODER SETUP ---
 const options = {
- // provider: process.env.GEOCODER_PROVIDER || 'openstreetmap', // Use openstreetmap as a default provider
- // apiKey: process.env.GEOCODER_API_KEY, 
+  provider: 'openstreetmap', // ✅ FIX 1: Provider is now enabled
   formatter: null
 };
 const geocoder = NodeGeocoder(options);
+// --- END: GEOCODER SETUP ---
 
 /**
- * @route   POST /agent/profile
+ * @route   POST /
  * @desc    Update a delivery agent's profile
  * @access  Private (Requires delivery agent role)
  */
-app.post('/', auth, async (req, res) => { // ROUTE IS /agent/profile now
+app.post('/', auth, async (req, res) => {
   await connectDB();
 
   const {
@@ -84,11 +85,11 @@ app.post('/', auth, async (req, res) => { // ROUTE IS /agent/profile now
         return res.status(400).json({ msg: 'Invalid currentLocation format. Must be an address string or an array: [longitude, latitude]' });
       }
 
-      fieldsToUpdate.currentLocation = geoPoint;
+      // ✅ FIX 2: Use the correct schema field name 'location'
+      fieldsToUpdate.location = geoPoint;
     }
     
     // 4. Perform the update
-    // The role check is done above, so we can proceed with the update confidently.
     const updatedAgent = await User.findByIdAndUpdate(
       userId,
       { $set: fieldsToUpdate },
@@ -105,7 +106,6 @@ app.post('/', auth, async (req, res) => { // ROUTE IS /agent/profile now
     if (err.code === 11000) {
       return res.status(400).json({ msg: 'This email or phone number is already in use.' });
     }
-    // Handle validation errors from runValidators: true
     if (err.name === 'ValidationError') {
         return res.status(400).json({ msg: `Validation Failed: ${err.message}` });
     }
@@ -113,5 +113,4 @@ app.post('/', auth, async (req, res) => { // ROUTE IS /agent/profile now
   }
 });
 
-// Changed export name to match the new route/purpose
 exports.deliveryagent_profile = app;
