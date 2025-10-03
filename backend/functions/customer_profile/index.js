@@ -1,0 +1,69 @@
+const express = require('express');
+const cors = require('cors');
+const connectDB = require('./common/db.js');
+const Customer = require('./common/models/Customer.js');
+const User = require('./common/models/User.js');
+const auth = require('./common/authMiddleware.js');
+
+const app = express();
+
+// Middleware
+app.use(cors({ origin: true }));
+app.use(express.json());
+
+app.post('/', auth, async (req, res) => {
+  await connectDB();
+
+  const {
+    fullName,
+    email,
+    phoneNumber,
+    homeAddress
+  } = req.body;
+
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+
+    if (!user || user.role !== 'customer') {
+      return res.status(403).json({ msg: 'Forbidden: User is not a customer.' });
+    }
+
+    // Check if customer profile exists
+    let customer = await Customer.findOne({ userId });
+
+    if (customer) {
+      // Update existing profile
+      customer = await Customer.findOneAndUpdate(
+        { userId },
+        {
+          $set: {
+            fullName,
+            email,
+            phoneNumber,
+            homeAddress
+          },
+        },
+        { new: true }
+      );
+      return res.status(200).json({ msg: 'Customer profile updated successfully', customer });
+    }
+
+    // Create new profile
+    customer = new Customer({
+      userId,
+      fullName,
+      email,
+      phoneNumber,
+      homeAddress
+    });
+
+    await customer.save();
+    res.status(201).json({ msg: 'Customer profile created successfully', customer });
+  } catch (err) {
+    console.error("Error details:", err);
+    res.status(500).send('Server error');
+  }
+});
+
+exports.customer_profile = app;
