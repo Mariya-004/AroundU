@@ -10,8 +10,9 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "express": "^5.1.0",
     "cors": "^2.8.5",
-    "mongoose": "^7.6.3"
+    "express": "^5.1.0",
+    "mongoose": "^7.6.3",
+    "node-geocoder": "^4.4.1"
   }
 }
