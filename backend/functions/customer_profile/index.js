@@ -34,18 +34,11 @@ app.post('/', auth, async (req, res) => {
 
     if (customer) {
       // Update existing profile
-      customer = await Customer.findOneAndUpdate(
-        { userId },
-        {
-          $set: {
-            fullName,
-            email,
-            phoneNumber,
-            homeAddress
-          },
-        },
-        { new: true }
-      );
+      customer.fullName = fullName;
+      customer.email = email;
+      customer.phoneNumber = phoneNumber;
+      customer.homeAddress = homeAddress;
+      await customer.save();
       return res.status(200).json({ msg: 'Customer profile updated successfully', customer });
     }
 

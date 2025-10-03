@@ -47,13 +47,13 @@ steps:
       - '--allow-unauthenticated'
       - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET'
   
-  # Deploy the 'login' function
+  # Deploy the 'customer-profile' function
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     args:
       - 'gcloud'
       - 'functions'
       - 'deploy'
-      - 'login'
+      - 'customer-profile'
       - '--gen2'
       - '--runtime=nodejs22'
       - '--region=asia-south1' # <-- Change to your region
@@ -64,4 +64,4 @@ steps:
       - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET'
 options:
   logging: CLOUD_LOGGING_ONLY
-  #modifying 
+  #modifying
