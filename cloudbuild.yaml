@@ -62,25 +62,6 @@ steps:
       - '--trigger-http'
       - '--allow-unauthenticated'
       - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET'
-options:
-  logging: CLOUD_LOGGING_ONLY
 
-# Deploy the 'deliveryagent-profile' function
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    args:
-      - 'gcloud'
-      - 'functions'
-      - 'deploy'
-      - 'deliveryagent-profile'
-      - '--gen2'
-      - '--runtime=nodejs22'
-      - '--region=asia-south1' # <-- Change to your region
-      - '--source=./backend/functions/deliveryagent_profile'
-      - '--entry-point=deliveryagent_profile'
-      - '--trigger-http'
-      - '--allow-unauthenticated'
-      - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET'
 options:
   logging: CLOUD_LOGGING_ONLY
-  #modifying
-  #modifying

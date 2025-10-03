@@ -30,7 +30,7 @@ userSchema.pre('save', async function(next) {
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
-
+//
 // Create 2dsphere index for delivery agent's current location to enable geo-queries
 userSchema.index({ currentLocation: '2dsphere' }, { background: true });
 
