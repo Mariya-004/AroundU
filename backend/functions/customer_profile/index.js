@@ -48,7 +48,7 @@ app.post('/', auth, async (req, res) => {
 
     if (customer) {
       // Update existing profile
-      customer.fullName = fullName;
+      user.fullName = fullName;
       customer.email = email;
       customer.phoneNumber = phoneNumber;
       customer.homeAddress = homeAddress;
