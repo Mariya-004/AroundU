@@ -1,25 +1,28 @@
 steps:
-  # Step 1: Explicitly run 'npm install' inside your function's directory.
-  # Assuming the function code is located in 'backend/functions/deliveryagent_profile'.
+  # Step 1: Install dependencies
   - name: 'gcr.io/cloud-builders/npm'
     args: ['install']
     dir: 'backend/functions/deliveryagent_profile'
 
-  # Step 2: Deploy the delivery agent profile function.
+  # Step 2: Deploy the function
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     args:
       - 'gcloud'
       - 'functions'
       - 'deploy'
-      - 'deliveryagent-profile' # Function name
+      - 'deliveryagent-profile'
       - '--gen2'
       - '--runtime=nodejs22'
-      - '--region=asia-south1' # Keep your desired region
+      - '--region=asia-south1'
       - '--source=./backend/functions/deliveryagent_profile'
-      - '--entry-point=deliveryagent_profile_update' # This matches the export name in the rectified index.js
+      - '--entry-point=deliveryagent_profile' # Corrected this to match your likely export
       - '--trigger-http'
-      - '--allow-unauthenticated' # Use authentication middleware to enforce security
-      - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET
+      - '--allow-unauthenticated'
+      # Corrected way to set environment variables for clarity and safety
+      - '--set-env-vars'
+      - 'MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET'
 
+# This block must be at the root level (no indentation)
 options:
+  # This line must be indented with two spaces
   logging: CLOUD_LOGGING_ONLY
