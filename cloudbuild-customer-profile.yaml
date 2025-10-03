@@ -1,5 +1,11 @@
 steps:
-  # Deploy ONLY the 'customer-profile' function
+  # Step 1: Explicitly run 'npm install' inside your function's directory.
+  # This forces the installation of all dependencies listed in your package.json.
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['install']
+    dir: 'backend/functions/customer_profile'
+
+  # Step 2: Deploy the function now that dependencies are guaranteed to be installed.
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     args:
       - 'gcloud'
