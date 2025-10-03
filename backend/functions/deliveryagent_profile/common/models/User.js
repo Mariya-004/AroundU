@@ -14,7 +14,7 @@ const userSchema = new mongoose.Schema({
   
   // --- NEW FIELDS ADDED FOR DELIVERY AGENT PROFILE ---
   phoneNumber: { type: String, unique: true, sparse: true }, // unique constraint, sparse for optionality
-  vehicleType: { type: String, enum: ['bike', 'car', 'van', 'foot'] }, // Example types
+  vehicleType: { type: String, enum: ['bike', 'car', 'van', 'foot'],set: (v) => v ? v.toLowerCase() : v  }, // Example types
   currentLocation: { // Stores agent's real-time/last reported location (GeoJSON)
     type: { type: String, enum: ['Point'], default: 'Point' },
     coordinates: { type: [Number], required: false } // [longitude, latitude]
