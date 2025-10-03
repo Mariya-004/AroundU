@@ -7,7 +7,7 @@ const NodeGeocoder = require('node-geocoder');
 
 const app = express();
 
-// Middleware
+// Middleware // Apply CORS and JSON parsing
 app.use(cors({ origin: true }));
 app.use(express.json());
 
