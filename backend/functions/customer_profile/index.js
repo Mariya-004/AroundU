@@ -31,63 +31,54 @@ app.post('/', auth, async (req, res) => {
   const {
     fullName,
     email,
-    homeAddress,
-    deliveryLocation // <-- NEW FIELD for specific location coordinates
+    phoneNumber,
+    homeAddress
   } = req.body;
 
   try {
     const userId = req.user.id;
+    const user = await User.findById(userId);
 
-    const fieldsToUpdate = {};
-    if (fullName) fieldsToUpdate.name = fullName;
-    if (email) fieldsToUpdate.email = email;
-    if (homeAddress) fieldsToUpdate.address = homeAddress; // Save the home address
-
-
-    // --- START: UPDATED GEOCODING LOGIC ---
-    // If a specific delivery location is provided, geocode it.
-    if (deliveryLocation && typeof deliveryLocation === 'string') {
-      const geocodedData = await geocoder.geocode(deliveryLocation);
-
-      // We only add the location coordinates if they are successfully found.
-      if (geocodedData && geocodedData.length > 0) {
-        const { latitude, longitude } = geocodedData[0];
-        fieldsToUpdate.location = {
-          type: 'Point',
-          coordinates: [longitude, latitude]
-        };
-      } else {
-        // Optional: Inform the user if the delivery location couldn't be found.
-        // For now, we'll just proceed without updating coordinates.
-        console.warn(`Could not geocode delivery location: "${deliveryLocation}"`);
-      }
-    }
-    // --- END: UPDATED GEOCODING LOGIC ---
-
-
-    const updatedCustomer = await User.findByIdAndUpdate(
-      userId,
-      { $set: fieldsToUpdate },
-      { new: true, runValidators: true }
-    ).select('-password');
-
-    if (!updatedCustomer) {
-      return res.status(404).json({ msg: 'User not found.' });
-    }
-
-    if (updatedCustomer.role !== 'customer') {
+    if (!user || user.role !== 'customer') {
       return res.status(403).json({ msg: 'Forbidden: User is not a customer.' });
     }
 
-    res.status(200).json({ msg: 'Customer profile updated successfully', customer: updatedCustomer });
+    // Check if customer profile exists
+    let customer = await Customer.findOne({ userId });
 
+    if (customer) {
+      // Update existing profile
+      user.fullName = fullName;
+      customer.email = email;
+      customer.phoneNumber = phoneNumber;
+      customer.homeAddress = homeAddress;
+      await customer.save();
+      return res.status(200).json({ msg: 'Customer profile updated successfully', customer });
+    }
+
+    // Create new profile
+    customer = new Customer({
+      userId,
+      fullName,
+      email,
+      phoneNumber,
+      homeAddress
+    });
+
+    await customer.save();
+    res.status(201).json({ msg: 'Customer profile created successfully', customer });
   } catch (err) {
     console.error("Error details:", err);
-    if (err.code === 11000) {
-      return res.status(400).json({ msg: 'This email is already in use.' });
-    }
     res.status(500).send('Server error');
   }
 });
+
+// Only start the server if not running as a Google Cloud Function
+/*if (require.main === module) {
+  const PORT = process.env.PORT || 8080;
+  app.listen(PORT, () => {
+    console.log(`Customer profile service listening on port ${PORT}`);
+  });
+}*/
 
 exports.customer_profile = app;
