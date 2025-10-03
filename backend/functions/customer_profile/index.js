@@ -59,4 +59,12 @@ app.post('/', auth, async (req, res) => {
   }
 });
 
+// Only start the server if not running as a Google Cloud Function
+if (require.main === module) {
+  const PORT = process.env.PORT || 8080;
+  app.listen(PORT, () => {
+    console.log(`Customer profile service listening on port ${PORT}`);
+  });
+}
+
 exports.customer_profile = app;
