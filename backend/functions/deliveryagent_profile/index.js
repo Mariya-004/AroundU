@@ -114,4 +114,4 @@ app.post('/', auth, async (req, res) => { // ROUTE IS /agent/profile now
 });
 
 // Changed export name to match the new route/purpose
-exports.deliveryagent_profile_update = app;
+exports.deliveryagent_profile = app;
