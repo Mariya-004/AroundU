@@ -67,6 +67,6 @@ app.get('/', auth, async (req, res) => {
     res.status(500).send('Server error');
   }
 });
-
+//
 exports.nearby_shops = app;
 
