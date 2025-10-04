@@ -1,8 +1,8 @@
 const express = require('express');
 const cors = require('cors');
-const connectDB = require('../common/db.js');
-const Shop = require('../common/models/Shop.js');
-const auth = require('../common/authMiddleware.js');
+const connectDB = require('./common/db.js');
+const Shop = require('./common/models/Shop.js');
+const auth = require('./common/authMiddleware.js');
 
 const app = express();
 
