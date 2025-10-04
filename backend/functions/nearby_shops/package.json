@@ -1,0 +1,20 @@
+{
+  "name": "nearby-shops-function",
+  "version": "1.0.0",
+  "description": "Finds nearby shops for a given location.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.0",
+    "mongoose": "^7.6.3",
+    "node-geocoder": "^4.4.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
