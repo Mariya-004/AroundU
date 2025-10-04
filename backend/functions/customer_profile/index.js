@@ -30,7 +30,6 @@ app.post('/', auth, async (req, res) => {
 
   const {
     fullName,
-    email,
     homeAddress,
     deliveryLocation // <-- NEW FIELD for specific location coordinates
   } = req.body;
@@ -40,7 +39,6 @@ app.post('/', auth, async (req, res) => {
 
     const fieldsToUpdate = {};
     if (fullName) fieldsToUpdate.name = fullName;
-    if (email) fieldsToUpdate.email = email;
     if (homeAddress) fieldsToUpdate.address = homeAddress; // Save the home address
 
 
