@@ -5,6 +5,7 @@ export default function CustomerProfile() {
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [homeAddress, setHomeAddress] = useState('');
+  const [deliveryLocation, setDeliveryLocation] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
@@ -23,7 +24,7 @@ export default function CustomerProfile() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ fullName, phoneNumber, homeAddress }),
+        body: JSON.stringify({ fullName, phoneNumber, homeAddress ,deliveryLocation}),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -139,23 +140,42 @@ export default function CustomerProfile() {
               outline: 'none'
             }}
           />
-          <div style={{ position: 'relative', marginBottom: 18 }}>
-            <span style={{
-              position: 'absolute',
-              left: 14,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: '#bdbdbd',
-              fontSize: 18
-            }}>🏠</span>
-            <input
+              
+            <div style={{ position: 'relative', marginBottom: 18 }}>
+              <span style={{
+                position: 'absolute',
+                left: 14,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: '#bdbdbd',
+                fontSize: 18
+              }}>🏠</span>
+              <input
+                type="text"
+                placeholder="Home Address"
+                value={homeAddress}
+                onChange={e => setHomeAddress(e.target.value)}
+                required
+                style={{
+                  padding: '14px 16px 14px 40px',
+                  borderRadius: 10,
+                  border: '1.5px solid #e4e4e4',
+                  background: '#fafcfa',
+                  fontSize: 16,
+                  outline: 'none',
+                  width: '100%'
+                }}
+              />
+            </div>
+           <input
               type="text"
-              placeholder="Home Address"
-              value={homeAddress}
-              onChange={e => setHomeAddress(e.target.value)}
+              placeholder="Delivery Location"
+              value={deliveryLocation}
+              onChange={e => setDeliveryLocation(e.target.value)}
               required
               style={{
-                padding: '14px 16px 14px 40px',
+                marginBottom: 18,
+                padding: '14px 16px',
                 borderRadius: 10,
                 border: '1.5px solid #e4e4e4',
                 background: '#fafcfa',
@@ -164,7 +184,7 @@ export default function CustomerProfile() {
                 width: '100%'
               }}
             />
-          </div>
+
           {error && <div style={{ color: 'red', marginBottom: 10, fontSize: 15 }}>{error}</div>}
           {success && <div style={{ color: 'green', marginBottom: 10, fontSize: 15 }}>{success}</div>}
           <button
