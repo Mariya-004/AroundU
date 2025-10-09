@@ -2,8 +2,8 @@ const express = require('express');
 const cors = require('cors');
 // Corrected paths to go up one directory level
 const connectDB = require('../common/db.js');
-const User = require('../common-models/User.js');
-const Shop = require('../common-models/Shop.js');
+const User = require('../common/models/User.js');
+const Shop = require('../common/models/Shop.js');
 const auth = require('../common/authMiddleware.js');
 
 const app = express();
