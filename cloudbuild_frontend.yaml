@@ -15,7 +15,7 @@ steps:
     - '-c'
     - |
       gcloud run deploy aroundu-frontend \
-        --source . \
+        --source=./frontend
         --region asia-south1 \
         --allow-unauthenticated \
         --platform managed
