@@ -10,6 +10,7 @@ import ShopkeeperProfileSetup from "./pages/shopkeepersetprofile";
 import DeliveryAgentProfileSetup from "./pages/deliveryagentsetprofile";
 import CustomerProfile from "./pages/customerProfile";
 import CustomerMap from "./pages/customermap"; // Uncomment if using the map page
+import AddProduct from "./pages/addProduct";
 function App() {
   return (
     <Router>
@@ -24,6 +25,7 @@ function App() {
         <Route path="/deliveryagent-setprofile" element={<DeliveryAgentProfileSetup />} />
         <Route path="/customer-profile" element={<CustomerProfile />} />
         <Route path="/customer-map" element={<CustomerMap />} />
+        <Route path="/add-product" element={<AddProduct />} />
         {/* ...other routes... */}
       </Routes>
     </Router>

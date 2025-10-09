@@ -95,6 +95,26 @@ export default function ShopkeeperDashboard() {
           </tbody>
         </table>
       </div>
+
+      {/* Add Product Button */}
+      <div style={{ marginTop: "30px" }}>
+        <button
+          style={{
+            background: "#19c37d",
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            padding: "12px 24px",
+            fontWeight: 700,
+            fontSize: 16,
+            margin: "24px 0",
+            cursor: "pointer"
+          }}
+          onClick={() => navigate('/add-product')}
+        >
+          + Add Product
+        </button>
+      </div>
     </div>
   );
 }
