@@ -12,18 +12,16 @@ app.use(cors({ origin: true }));
 app.options('*', cors());
 app.use(express.json());
 
-// --- START: GEOCODER SETUP ---
+// --- Geocoder Setup ---
 const options = {
   provider: 'openstreetmap',
   formatter: null
 };
 const geocoder = NodeGeocoder(options);
-// --- END: GEOCODER SETUP ---
-
-
+//
 /**
  * @route   POST /
- * @desc    Update a customer's profile, including geocoding a specific delivery location
+ * @desc    Update a customer's profile, including geocoding and phone number
  * @access  Private (Requires customer role)
  */
 app.post('/', auth, async (req, res) => {
@@ -32,7 +30,7 @@ app.post('/', auth, async (req, res) => {
   const {
     fullName,
     homeAddress,
-    deliveryLocation // specific address string provided by user
+    deliveryLocation // <-- NEW FIELD for specific location coordinates
   } = req.body;
 
   try {
@@ -40,11 +38,15 @@ app.post('/', auth, async (req, res) => {
 
     const fieldsToUpdate = {};
     if (fullName) fieldsToUpdate.name = fullName;
-    if (homeAddress) fieldsToUpdate.address = homeAddress;
+    if (homeAddress) fieldsToUpdate.address = homeAddress; // Save the home address
 
-    // --- UPDATED GEOCODING LOGIC ---
+
+    // --- START: UPDATED GEOCODING LOGIC ---
+    // If a specific delivery location is provided, geocode it.
     if (deliveryLocation && typeof deliveryLocation === 'string') {
       const geocodedData = await geocoder.geocode(deliveryLocation);
+
+      // We only add the location coordinates if they are successfully found.
       if (geocodedData && geocodedData.length > 0) {
         const { latitude, longitude } = geocodedData[0];
         fieldsToUpdate.location = {
