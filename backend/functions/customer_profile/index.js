@@ -17,7 +17,7 @@ const options = {
   formatter: null
 };
 const geocoder = NodeGeocoder(options);
-
+//
 /**
  * @route   POST /
  * @desc    Update a customer's profile, including geocoding and phone number
