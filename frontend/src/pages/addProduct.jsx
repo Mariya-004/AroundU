@@ -20,7 +20,7 @@ export default function AddProduct() {
     formData.append('file', file);
 
     // Replace with your actual image upload endpoint
-    const res = await fetch('https://your-image-upload-endpoint', {
+    const res = await fetch('https://asia-south1-aroundu-473113.cloudfunctions.net/add_product', {
       method: 'POST',
       body: formData,
     });
