@@ -62,7 +62,7 @@ export default function ShopkeeperDashboard() {
       <div style={{ marginBottom: "30px" }}>
         <h3 style={{ fontSize: "1.2rem", marginBottom: "10px" }}>Quick Actions</h3>
         <div style={{ display: "flex", gap: "15px" }}>
-          <button style={actionBtnStyle}>Add New Product</button>
+          <button style={actionBtnStyle} onClick={() => navigate('/add-product')} > Add New Product</button>
           <button style={actionBtnStyle}>View Insights</button>
         </div>
       </div>
