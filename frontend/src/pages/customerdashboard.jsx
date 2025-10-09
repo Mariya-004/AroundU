@@ -35,6 +35,22 @@ export default function CustomerDashboard() {
       >
         Profile Setup
       </button>
+       {/* Map Button */}
+      <button
+        style={{
+          marginBottom: "20px",
+          padding: "10px 20px",
+          background: "#144139",
+          color: "#fff",
+          border: "none",
+          borderRadius: "8px",
+          cursor: "pointer",
+          fontWeight: "bold",
+        }}
+        onClick={() => navigate("/customer-map")}
+      >
+        View Map
+      </button>
 
       {/* Search Bar */}
       <input
