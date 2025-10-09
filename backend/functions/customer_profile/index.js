@@ -52,7 +52,7 @@ app.post('/', auth, async (req, res) => {
           coordinates: [longitude, latitude]
         };
       } else {
-        console.warn(Could not geocode delivery location: "${deliveryLocation}");
+        console.warn(`Could not geocode delivery location: "${deliveryLocation}"`);
       }
     }
 
