@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const NodeGeocoder = require('node-geocoder'); // <-- Added for geocoding
+const NodeGeocoder = require('node-geocoder');
 const connectDB = require('./common/db.js');
 const User = require('./common/models/User.js');
 const auth = require('./common/authMiddleware.js');
@@ -11,18 +11,16 @@ const app = express();
 app.use(cors({ origin: true }));
 app.use(express.json());
 
-// --- START: GEOCODER SETUP ---
+// --- Geocoder Setup ---
 const options = {
   provider: 'openstreetmap',
   formatter: null
 };
 const geocoder = NodeGeocoder(options);
-// --- END: GEOCODER SETUP ---
-
 
 /**
  * @route   POST /
- * @desc    Update a customer's profile, including geocoding a specific delivery location
+ * @desc    Update a customer's profile, including geocoding and phone number
  * @access  Private (Requires customer role)
  */
 app.post('/', auth, async (req, res) => {
@@ -31,7 +29,8 @@ app.post('/', auth, async (req, res) => {
   const {
     fullName,
     homeAddress,
-    deliveryLocation // <-- NEW FIELD for specific location coordinates
+    deliveryLocation,
+    phoneNumber // <-- ADDED: Destructure phone number from request body
   } = req.body;
 
   try {
@@ -39,15 +38,13 @@ app.post('/', auth, async (req, res) => {
 
     const fieldsToUpdate = {};
     if (fullName) fieldsToUpdate.name = fullName;
-    if (homeAddress) fieldsToUpdate.address = homeAddress; // Save the home address
+    if (homeAddress) fieldsToUpdate.address = homeAddress;
+    if (phoneNumber) fieldsToUpdate.phoneNumber = phoneNumber; // <-- ADDED: Add phone number to update object
 
-
-    // --- START: UPDATED GEOCODING LOGIC ---
-    // If a specific delivery location is provided, geocode it.
+    // --- Geocoding Logic ---
     if (deliveryLocation && typeof deliveryLocation === 'string') {
       const geocodedData = await geocoder.geocode(deliveryLocation);
 
-      // We only add the location coordinates if they are successfully found.
       if (geocodedData && geocodedData.length > 0) {
         const { latitude, longitude } = geocodedData[0];
         fieldsToUpdate.location = {
@@ -55,13 +52,9 @@ app.post('/', auth, async (req, res) => {
           coordinates: [longitude, latitude]
         };
       } else {
-        // Optional: Inform the user if the delivery location couldn't be found.
-        // For now, we'll just proceed without updating coordinates.
         console.warn(`Could not geocode delivery location: "${deliveryLocation}"`);
       }
     }
-    // --- END: UPDATED GEOCODING LOGIC ---
-
 
     const updatedCustomer = await User.findByIdAndUpdate(
       userId,
