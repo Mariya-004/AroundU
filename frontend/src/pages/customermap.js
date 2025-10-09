@@ -8,31 +8,61 @@ const customerIcon = new L.Icon({
 });
 
 const shopIcon = new L.Icon({
-  iconUrl: "https://cdn-icons-png.flaticon.com/512/2972/2972106.png", // shop / storefront icon
+  iconUrl: "https://cdn-icons-png.flaticon.com/512/2972/2972106.png",
   iconSize: [40, 40],
 });
 
 const CustomerMap = () => {
   const [shops, setShops] = useState([]);
-  const [position, setPosition] = useState([10.0159, 76.3419]); // Default (Kochi)
+  const [position, setPosition] = useState([10.0159, 76.3419]); // fallback (Kochi)
   const [radius, setRadius] = useState(5);
 
   useEffect(() => {
-    // Step 1: Get current location (optional)
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setPosition([latitude, longitude]);
-        fetchShops(latitude, longitude);
-      },
-      () => fetchShops(position[0], position[1])
-    );
+    fetchCustomerLocationAndShops();
   }, []);
 
-  // Step 2: Fetch nearby shops from backend
-  const fetchShops = async (lat, lng) => {
+  const fetchCustomerLocationAndShops = async () => {
     try {
-      const token = localStorage.getItem("token"); // JWT from login
+      const token = localStorage.getItem("token");
+
+      // Step 1: Fetch customer's saved delivery location
+      const res = await fetch(
+        "https://asia-south1-aroundu-473113.cloudfunctions.net/customer-profile",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!res.ok) {
+        console.error("Error fetching customer profile:", res.statusText);
+        return;
+      }
+
+      const data = await res.json();
+      console.log("Fetched customer profile:", data);
+
+      if (
+        data.deliveryLocation &&
+        data.deliveryLocation.coordinates &&
+        data.deliveryLocation.coordinates.length === 2
+      ) {
+        const [lng, lat] = data.deliveryLocation.coordinates;
+        setPosition([lat, lng]);
+        fetchNearbyShops(lat, lng);
+      } else {
+        console.warn("No delivery location found for this customer.");
+      }
+    } catch (err) {
+      console.error("Error loading map:", err);
+    }
+  };
+
+  // Step 2: Fetch nearby shops from backend
+  const fetchNearbyShops = async (lat, lng) => {
+    try {
+      const token = localStorage.getItem("token");
       const res = await fetch(
         `https://asia-south1-aroundu-473113.cloudfunctions.net/nearby-shops?lat=${lat}&lng=${lng}&radius=${radius}`,
         {
@@ -41,6 +71,12 @@ const CustomerMap = () => {
           },
         }
       );
+
+      if (!res.ok) {
+        console.error("Error fetching shops:", res.statusText);
+        return;
+      }
+
       const data = await res.json();
       if (data.shops) setShops(data.shops);
     } catch (err) {
@@ -50,11 +86,7 @@ const CustomerMap = () => {
 
   return (
     <div style={{ height: "100vh", width: "100%" }}>
-      <MapContainer
-        center={position}
-        zoom={14}
-        style={{ height: "100%", width: "100%" }}
-      >
+      <MapContainer center={position} zoom={14} style={{ height: "100%", width: "100%" }}>
         <TileLayer
           attribution="© OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -62,7 +94,7 @@ const CustomerMap = () => {
 
         {/* Customer Marker */}
         <Marker position={position} icon={customerIcon}>
-          <Popup>You are here</Popup>
+          <Popup>📍 Your Delivery Location</Popup>
         </Marker>
 
         {/* Radius Circle */}
@@ -74,7 +106,7 @@ const CustomerMap = () => {
           fillOpacity={0.2}
         />
 
-        {/* Shops Markers */}
+        {/* Shop Markers */}
         {shops.map((shop) => (
           <Marker
             key={shop._id}
