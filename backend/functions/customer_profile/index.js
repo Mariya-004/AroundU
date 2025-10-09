@@ -9,7 +9,6 @@ const app = express();
 
 // Middleware
 app.use(cors({ origin: true }));
-app.options('*', cors());
 app.use(express.json());
 
 // --- Geocoder Setup ---
@@ -30,7 +29,8 @@ app.post('/', auth, async (req, res) => {
   const {
     fullName,
     homeAddress,
-    deliveryLocation // <-- NEW FIELD for specific location coordinates
+    deliveryLocation,
+    phoneNumber // <-- ADDED: Destructure phone number from request body
   } = req.body;
 
   try {
@@ -38,23 +38,21 @@ app.post('/', auth, async (req, res) => {
 
     const fieldsToUpdate = {};
     if (fullName) fieldsToUpdate.name = fullName;
-    if (homeAddress) fieldsToUpdate.address = homeAddress; // Save the home address
+    if (homeAddress) fieldsToUpdate.address = homeAddress;
+    if (phoneNumber) fieldsToUpdate.phoneNumber = phoneNumber; // <-- ADDED: Add phone number to update object
 
-
-    // --- START: UPDATED GEOCODING LOGIC ---
-    // If a specific delivery location is provided, geocode it.
+    // --- Geocoding Logic ---
     if (deliveryLocation && typeof deliveryLocation === 'string') {
       const geocodedData = await geocoder.geocode(deliveryLocation);
 
-      // We only add the location coordinates if they are successfully found.
       if (geocodedData && geocodedData.length > 0) {
         const { latitude, longitude } = geocodedData[0];
         fieldsToUpdate.location = {
           type: 'Point',
-          coordinates: [longitude, latitude],
+          coordinates: [longitude, latitude]
         };
       } else {
-        console.warn(`Could not geocode delivery location: "${deliveryLocation}"`);
+        console.warn(Could not geocode delivery location: "${deliveryLocation}");
       }
     }
 
@@ -72,12 +70,10 @@ app.post('/', auth, async (req, res) => {
       return res.status(403).json({ msg: 'Forbidden: User is not a customer.' });
     }
 
-    res.status(200).json({
-      msg: 'Customer profile updated successfully',
-      customer: updatedCustomer,
-    });
+    res.status(200).json({ msg: 'Customer profile updated successfully', customer: updatedCustomer });
+
   } catch (err) {
-    console.error('Error details:', err);
+    console.error("Error details:", err);
     if (err.code === 11000) {
       return res.status(400).json({ msg: 'This email is already in use.' });
     }
@@ -85,38 +81,4 @@ app.post('/', auth, async (req, res) => {
   }
 });
 
-
-/**
- * @route   GET /
- * @desc    Get a customer's profile details (including delivery location)
- * @access  Private (Requires customer role)
- */
-app.get('/', auth, async (req, res) => {
-  await connectDB();
-
-  try {
-    const userId = req.user.id;
-    const customer = await User.findById(userId).select('-password');
-
-    if (!customer) {
-      return res.status(404).json({ msg: 'Customer not found.' });
-    }
-
-    if (customer.role !== 'customer') {
-      return res.status(403).json({ msg: 'Forbidden: User is not a customer.' });
-    }
-
-    res.status(200).json({
-      name: customer.name,
-      email: customer.email,
-      homeAddress: customer.address,
-      deliveryLocation: customer.location, // includes lat/lng
-    });
-  } catch (err) {
-    console.error('Error fetching profile:', err);
-    res.status(500).send('Server error');
-  }
-});
-
 exports.customer_profile = app;
-//
