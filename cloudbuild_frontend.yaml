@@ -19,3 +19,5 @@ steps:
         --region asia-south1 \
         --allow-unauthenticated \
         --platform managed
+options:
+  logging: CLOUD_LOGGING_ONLY
