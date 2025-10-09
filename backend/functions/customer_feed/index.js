@@ -1,9 +1,10 @@
 const express = require('express');
 const cors = require('cors');
-const connectDB = require('./common/db.js');
-const User = require('./common-models/User.js'); // Assuming models are in a shared directory
-const Shop = require('./common-models/Shop.js'); // Assuming models are in a shared directory
-const auth = require('./common/authMiddleware.js');
+// Corrected paths to go up one directory level
+const connectDB = require('../common/db.js');
+const User = require('../common-models/User.js');
+const Shop = require('../common-models/Shop.js');
+const auth = require('../common/authMiddleware.js');
 
 const app = express();
 
@@ -41,7 +42,7 @@ app.get('/', auth, async (req, res) => {
                 name: customer.name,
                 email: customer.email,
                 homeAddress: customer.address,
-                phoneNumber: customer.phoneNumber // <-- PHONE NUMBER ADDED HERE
+                phoneNumber: customer.phoneNumber
             }
         });
     }
@@ -73,7 +74,7 @@ app.get('/', auth, async (req, res) => {
         name: customer.name,
         email: customer.email,
         homeAddress: customer.address,
-        phoneNumber: customer.phoneNumber, // <-- PHONE NUMBER ADDED HERE
+        phoneNumber: customer.phoneNumber,
         deliveryLocation: customer.location
       },
       shops: nearbyShops
@@ -85,5 +86,5 @@ app.get('/', auth, async (req, res) => {
   }
 });
 
-exports.customer_home_feed = app;
+exports.customer_feed = app;
 
