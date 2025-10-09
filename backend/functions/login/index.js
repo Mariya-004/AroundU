@@ -18,7 +18,7 @@ app.post('/', async (req, res) => {
   // Establish the database connection inside the handler
   await connectDB();
 
-  const { email, password } = req.body;
+  const { email, password, role } = req.body; // <-- ADD 'role' HERE
 
   try {
     // Find the user by email
@@ -26,6 +26,13 @@ app.post('/', async (req, res) => {
     if (!user) {
       return res.status(400).json({ msg: 'Invalid credentials' });
     }
+
+    // <-- ADD THIS BLOCK -->
+    // Check if the role from the request matches the user's role in the DB
+    if (user.role !== role) {
+      return res.status(400).json({ msg: 'Invalid credentials for the selected role' });
+    }
+    // <-- END OF ADDED BLOCK -->
 
     // Compare the provided password with the stored hash
     const isMatch = await bcrypt.compare(password, user.password);
