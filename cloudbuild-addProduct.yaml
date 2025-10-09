@@ -1,0 +1,32 @@
+# This Cloud Build configuration is specifically for deploying the 'nearby-shops'
+# Google Cloud Function.
+
+steps:
+  # --- Step 1: Install dependencies for the nearby-shops function ---
+  # This step navigates to the function's directory and runs 'npm install'
+  # to ensure all required packages are available before deployment.
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['install']
+    dir: 'backend/functions/add_product' # The specific directory for this function
+
+  # --- Step 2: Deploy the nearby-shops function ---
+  # This step uses the gcloud SDK to deploy the function to Google Cloud.
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'functions'
+      - 'deploy'
+      - 'add_product' # The name of the function to deploy
+      - '--gen2'
+      - '--runtime=nodejs22'
+      - '--region=asia-south1'
+      - '--source=./backend/functions/add_product' # Source code directory
+      - '--entry-point=add_product' # Matches the exported function name in your code
+      - '--trigger-http'
+      - '--allow-unauthenticated'
+      - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET'
+
+
+
+options:
+  logging: CLOUD_LOGGING_ONLY
