@@ -1,5 +1,5 @@
 const express = require('express');
-const cors = require('cors'); // Make sure cors is imported
+const cors = require('cors');
 const connectDB = require('./common/db.js');
 const Shop = require('./common/models/Shop.js');
 const User = require('./common/models/User.js');
@@ -14,15 +14,9 @@ const multer_upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-// --- FIX STARTS HERE ---
 
-// Apply CORS middleware FIRST. This will handle all requests, including the OPTIONS preflight.
+// Apply CORS middleware to handle all incoming requests, including preflight
 app.use(cors({ origin: true }));
-
-// This will handle the OPTIONS request and send back a successful response.
-app.options('*', cors()); 
-
-// --- FIX ENDS HERE ---
 
 
 app.post('/', auth, multer_upload.single('imageFile'), async (req, res) => {
