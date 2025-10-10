@@ -10,26 +10,30 @@ const multer = require('multer');
 const { Storage } = require('@google-cloud/storage');
 
 const app = express();
-const storage = new Storage(); // Assumes authentication is handled by the environment
-const multer_upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 5 * 1024 * 1024, // no larger than 5mb
-  },
-});
 
-// Important: Do NOT use express.json() for this multipart form route
+// ✅ Enable CORS only — NO express.json() (critical for multer)
 app.use(cors({ origin: true }));
 app.options('*', cors({ origin: true }));
 
-// This route now handles both file upload and data saving
-app.post('/', auth, multer_upload.single('imageFile'), async (req, res) => {
+// ✅ Multer setup for memory storage (no file system)
+const multer_upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
+
+// ✅ Google Cloud Storage instance (assumes proper permissions)
+const storage = new Storage();
+
+app.post('/', auth, (req, res, next) => {
+  // Manually disable automatic body parsing for Cloud Functions
+  req.rawBody = req.rawBody || req.body;
+  next();
+}, multer_upload.single('imageFile'), async (req, res) => {
   await connectDB();
 
   try {
     const userId = req.user.id;
     const user = await User.findById(userId);
-
     if (!user || user.role !== 'shopkeeper') {
       return res.status(403).json({ msg: 'Forbidden: User is not a shopkeeper.' });
     }
@@ -41,15 +45,13 @@ app.post('/', auth, multer_upload.single('imageFile'), async (req, res) => {
 
     let uploadedImageUrl = '';
 
-    // If a file was uploaded, handle it
+    // ✅ Handle image upload (only if file exists)
     if (req.file) {
-      const bucketName = 'aroundu-products'; // <-- IMPORTANT: REPLACE THIS
+      const bucketName = 'aroundu-products'; // Ensure this bucket exists
       const bucket = storage.bucket(bucketName);
-      const blob = bucket.file(Date.now() + "_" + req.file.originalname);
-      
-      const blobStream = blob.createWriteStream({
-        resumable: false,
-      });
+      const blob = bucket.file(`${Date.now()}_${req.file.originalname}`);
+
+      const blobStream = blob.createWriteStream({ resumable: false });
 
       await new Promise((resolve, reject) => {
         blobStream.on('finish', () => {
@@ -57,31 +59,38 @@ app.post('/', auth, multer_upload.single('imageFile'), async (req, res) => {
           resolve();
         });
         blobStream.on('error', (err) => {
-          reject('Unable to upload image, something went wrong');
+          console.error('GCS upload error:', err);
+          reject(err);
         });
         blobStream.end(req.file.buffer);
       });
     }
 
-    // Now, save the product details from the form fields
+    // ✅ Save product to shop
     const { name, description, price, stock } = req.body;
-    const newProduct = { 
-      name, 
-      description, 
-      price: Number(price), // Ensure price and stock are numbers
-      stock: Number(stock), 
-      imageUrl: uploadedImageUrl 
+    if (!name || !price || !stock) {
+      return res.status(400).json({ msg: 'Missing product details' });
+    }
+
+    const newProduct = {
+      name,
+      description: description || '',
+      price: Number(price),
+      stock: Number(stock),
+      imageUrl: uploadedImageUrl,
     };
 
     shop.products.push(newProduct);
     await shop.save();
 
-    res.status(201).json(shop.products.slice(-1)[0]); // Return the newly added product
+    res.status(201).json({
+      msg: 'Product added successfully',
+      product: shop.products.at(-1),
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    console.error('❌ Add Product Error:', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
   }
 });
-
 
 exports.add_product = app;
