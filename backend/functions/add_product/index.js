@@ -84,5 +84,4 @@ app.post('/', auth, multer_upload.single('imageFile'), async (req, res) => {
 });
 
 
-
 exports.add_product = app;
