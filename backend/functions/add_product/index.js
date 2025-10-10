@@ -1,5 +1,6 @@
+// add_product.js
+
 const express = require('express');
-const cors = require('cors');
 const connectDB = require('./common/db.js');
 const Shop = require('./common/models/Shop.js');
 const User = require('./common/models/User.js');
@@ -8,43 +9,43 @@ const multer = require('multer');
 const { Storage } = require('@google-cloud/storage');
 
 const app = express();
+const storage = new Storage();
+const bucketName = 'your-gcs-bucket-name'; // 🔧 Replace this
 
-// ✅ Manually define allowed origins
+// ✅ CORS setup for frontend + local dev
 const allowedOrigins = [
-  'https://aroundu-frontend-164909903360.asia-south1.run.app', // your frontend
+  'https://aroundu-frontend-164909903360.asia-south1.run.app',
+  'http://localhost:5173',
 ];
 
-// ✅ CORS middleware for all requests
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
-
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
 
   if (req.method === 'OPTIONS') {
-    return res.status(204).send(''); // ✅ Preflight response
+    return res.status(204).send('');
   }
 
   next();
 });
 
-const storage = new Storage();
 const multer_upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB limit
 });
 
+// ✅ Main route
 app.post('/', auth, multer_upload.single('imageFile'), async (req, res) => {
-  await connectDB();
-
   try {
+    await connectDB();
+
     const userId = req.user.id;
     const user = await User.findById(userId);
-
     if (!user || user.role !== 'shopkeeper') {
       return res.status(403).json({ msg: 'Forbidden: User is not a shopkeeper.' });
     }
@@ -56,11 +57,10 @@ app.post('/', auth, multer_upload.single('imageFile'), async (req, res) => {
 
     let uploadedImageUrl = '';
 
+    // ✅ Handle image upload to GCS
     if (req.file) {
-      const bucketName = 'your-gcs-bucket-name'; // 🔧 Replace this
       const bucket = storage.bucket(bucketName);
-      const blob = bucket.file(Date.now() + '_' + req.file.originalname);
-
+      const blob = bucket.file(`${Date.now()}_${req.file.originalname}`);
       const blobStream = blob.createWriteStream({ resumable: false });
 
       await new Promise((resolve, reject) => {
@@ -73,6 +73,7 @@ app.post('/', auth, multer_upload.single('imageFile'), async (req, res) => {
       });
     }
 
+    // ✅ Save product details
     const { name, description, price, stock } = req.body;
     const newProduct = {
       name,
@@ -87,14 +88,10 @@ app.post('/', auth, multer_upload.single('imageFile'), async (req, res) => {
 
     res.status(201).json(shop.products.slice(-1)[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    console.error('Server error:', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
   }
 });
 
-// ⚠️ DO NOT start a local server when deploying to Cloud Functions
-// const PORT = process.env.PORT || 8080;
-// app.listen(PORT, () => console.log(`Server running on ${PORT}`));
-
-// ✅ Export for Cloud Function
+// ✅ Important: DO NOT start a server with app.listen()
 exports.add_product = app;
