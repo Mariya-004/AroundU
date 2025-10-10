@@ -1,27 +1,30 @@
 const express = require('express');
-const cors = require('cors');
+const cors = require('cors'); // Make sure cors is imported
 const connectDB = require('./common/db.js');
 const Shop = require('./common/models/Shop.js');
 const User = require('./common/models/User.js');
 const auth = require('./common/authMiddleware.js');
-
-// For file uploads
 const multer = require('multer');
 const { Storage } = require('@google-cloud/storage');
 
 const app = express();
-const storage = new Storage(); // Assumes authentication is handled by the environment
+const storage = new Storage();
 const multer_upload = multer({
   storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 5 * 1024 * 1024, // no larger than 5mb
-  },
+  limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-// Important: Do NOT use express.json() for this multipart form route
+// --- FIX STARTS HERE ---
+
+// Apply CORS middleware FIRST. This will handle all requests, including the OPTIONS preflight.
 app.use(cors({ origin: true }));
 
-// This route now handles both file upload and data saving
+// This will handle the OPTIONS request and send back a successful response.
+app.options('*', cors()); 
+
+// --- FIX ENDS HERE ---
+
+
 app.post('/', auth, multer_upload.single('imageFile'), async (req, res) => {
   await connectDB();
 
@@ -39,16 +42,11 @@ app.post('/', auth, multer_upload.single('imageFile'), async (req, res) => {
     }
 
     let uploadedImageUrl = '';
-
-    // If a file was uploaded, handle it
     if (req.file) {
-      const bucketName = 'your-gcs-bucket-name'; // <-- IMPORTANT: REPLACE THIS
+      const bucketName = 'aroundu-products'; // IMPORTANT: Make sure this bucket name is correct
       const bucket = storage.bucket(bucketName);
       const blob = bucket.file(Date.now() + "_" + req.file.originalname);
-      
-      const blobStream = blob.createWriteStream({
-        resumable: false,
-      });
+      const blobStream = blob.createWriteStream({ resumable: false });
 
       await new Promise((resolve, reject) => {
         blobStream.on('finish', () => {
@@ -56,33 +54,33 @@ app.post('/', auth, multer_upload.single('imageFile'), async (req, res) => {
           resolve();
         });
         blobStream.on('error', (err) => {
+          console.error("GCS Upload Error:", err);
           reject('Unable to upload image, something went wrong');
         });
         blobStream.end(req.file.buffer);
       });
     }
 
-    // Now, save the product details from the form fields
     const { name, description, price, stock } = req.body;
-    const newProduct = { 
-      name, 
-      description, 
-      price: Number(price), // Ensure price and stock are numbers
-      stock: Number(stock), 
-      imageUrl: uploadedImageUrl 
+    const newProduct = {
+      name,
+      description,
+      price: Number(price),
+      stock: Number(stock),
+      imageUrl: uploadedImageUrl
     };
 
     shop.products.push(newProduct);
     await shop.save();
-
-    res.status(201).json(shop.products.slice(-1)[0]); // Return the newly added product
+    res.status(201).json(shop.products.slice(-1)[0]);
+    
   } catch (err) {
-    console.error(err);
+    console.error("Server Error:", err);
     res.status(500).send('Server error');
   }
 });
 
-// Start the server
+// Start the server for Cloud Run
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
