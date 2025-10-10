@@ -42,7 +42,7 @@ app.post('/', auth, multer_upload.single('imageFile'), async (req, res) => {
 
     // If a file was uploaded, handle it
     if (req.file) {
-      const bucketName = 'your-gcs-bucket-name'; // <-- IMPORTANT: REPLACE THIS
+      const bucketName = 'aroundu-products'; // <-- IMPORTANT: REPLACE THIS
       const bucket = storage.bucket(bucketName);
       const blob = bucket.file(Date.now() + "_" + req.file.originalname);
       
