@@ -20,6 +20,7 @@ const multer_upload = multer({
 
 // Important: Do NOT use express.json() for this multipart form route
 app.use(cors({ origin: true }));
+app.options('*', cors({ origin: true }));
 
 // This route now handles both file upload and data saving
 app.post('/', auth, multer_upload.single('imageFile'), async (req, res) => {
@@ -82,10 +83,6 @@ app.post('/', auth, multer_upload.single('imageFile'), async (req, res) => {
   }
 });
 
-// Start the server
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
-});
+
 
 exports.add_product = app;
