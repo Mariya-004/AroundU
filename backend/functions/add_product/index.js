@@ -14,8 +14,6 @@ app.use(cors({ origin: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// This fixes the "Unexpected end of form" issue on GCF:
-app.use(express.raw({ type: 'multipart/form-data', limit: '10mb' }));
 
 // --- Ensure Upload Directory Exists ---
 const uploadsDir = path.join(__dirname, 'uploads');
