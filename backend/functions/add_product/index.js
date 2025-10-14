@@ -7,7 +7,7 @@ const { format } = util;
 
 // Common modules
 const connectDB = require('./common/db.js');
-const Shop = require('./common-models/Shop.js'); // Adjusted path for clarity
+const Shop = require('./common/models/Shop.js'); // Adjusted path for clarity
 const auth = require('./common/authMiddleware.js');
 
 const app = express();
