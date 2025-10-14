@@ -1,14 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
 import L from "leaflet";
-import "leaflet/dist/leaflet.css"; // Make sure to import Leaflet's CSS
+import "leaflet/dist/leaflet.css";
 
 // --- Define Custom Icons ---
-const customerIcon = new L.Icon({
-  iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png", // Customer location icon
+const deliveryIcon = new L.Icon({
+  iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png", // Saved delivery location icon
   iconSize: [35, 35],
   iconAnchor: [17, 35],
   popupAnchor: [0, -35],
+});
+
+const liveIcon = new L.Icon({
+  iconUrl: "https://cdn-icons-png.flaticon.com/512/7876/7876209.png", // Blue live location icon
+  iconSize: [30, 30],
+  iconAnchor: [15, 30],
+  popupAnchor: [0, -30],
 });
 
 const shopIcon = new L.Icon({
@@ -18,62 +25,48 @@ const shopIcon = new L.Icon({
   popupAnchor: [0, -40],
 });
 
-// --- The Main Map Component ---
 const CustomerMap = () => {
-  // State for the data we will fetch
   const [customerProfile, setCustomerProfile] = useState(null);
   const [shops, setShops] = useState([]);
-  
-  // State to manage UI (loading and errors)
+  const [liveLocation, setLiveLocation] = useState(null);
+  const [useLiveLocation, setUseLiveLocation] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [mapCenter, setMapCenter] = useState([10.5276, 76.2144]); // Default center (Thrissur)
+  const searchRadius = 5; // 5 km radius
 
-  // The map's center position. Default to a fallback location (e.g., Thrissur, Kerala).
-  const [mapCenter, setMapCenter] = useState([10.5276, 76.2144]);
-  const searchRadius = 5; // 5 km radius, matching the backend default
-
+  // Fetch saved delivery location + nearby shops initially
   useEffect(() => {
-    // This function will be called once when the component mounts.
     const fetchCustomerData = async () => {
       try {
         setLoading(true);
         setError(null);
-        
-        const token = localStorage.getItem("token");
-        if (!token) {
-          throw new Error("Authentication token not found. Please log in.");
-        }
 
-        // --- SINGLE API CALL to the new, unified endpoint ---
-        const response = await fetch(
+        const token = localStorage.getItem("token");
+        if (!token) throw new Error("Authentication token not found.");
+
+        const res = await fetch(
           "https://asia-south1-aroundu-473113.cloudfunctions.net/customer-feed",
           {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` },
           }
         );
 
-        if (!response.ok) {
-          // Handle specific errors from the backend, like 400 or 404
-          const errorData = await response.json();
-          throw new Error(errorData.msg || `Error: ${response.status}`);
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.msg || `Error: ${res.status}`);
         }
 
-        const data = await response.json();
-        
-        // --- Process the unified response ---
+        const data = await res.json();
         setCustomerProfile(data.customerProfile);
-        setShops(data.shops || []); // Ensure shops is an array even if it's missing
+        setShops(data.shops || []);
 
-        // Set the map's center to the customer's saved delivery location
-        if (data.customerProfile && data.customerProfile.deliveryLocation) {
+        if (data.customerProfile?.deliveryLocation?.coordinates) {
           const [lng, lat] = data.customerProfile.deliveryLocation.coordinates;
-          setMapCenter([lat, lng]); // Leaflet uses [lat, lng]
+          setMapCenter([lat, lng]);
         }
-
       } catch (err) {
-        console.error("Failed to fetch customer data:", err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -81,47 +74,122 @@ const CustomerMap = () => {
     };
 
     fetchCustomerData();
-  }, []); // The empty array [] ensures this effect runs only once.
+  }, []);
 
-  // --- Render UI based on state ---
+  // Track live location and optionally fetch nearby shops based on it
+  useEffect(() => {
+    if ("geolocation" in navigator) {
+      const watchId = navigator.geolocation.watchPosition(
+        async (pos) => {
+          const { latitude, longitude } = pos.coords;
+          setLiveLocation([latitude, longitude]);
 
-  if (loading) {
-    return <div style={{ textAlign: 'center', marginTop: '20%' }}><h2>Loading Map...</h2></div>;
-  }
+          // If live location mode is enabled, fetch nearby shops based on current GPS
+          if (useLiveLocation) {
+            try {
+              const token = localStorage.getItem("token");
+              const res = await fetch(
+                `https://asia-south1-aroundu-473113.cloudfunctions.net/nearby-shops?lat=${latitude}&lng=${longitude}&radius=5`,
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              const data = await res.json();
+              if (data.shops) setShops(data.shops);
+              setMapCenter([latitude, longitude]);
+            } catch (err) {
+              console.error("Error fetching shops by live location:", err);
+            }
+          }
+        },
+        (err) => console.warn("Live location denied:", err.message),
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
+      );
 
-  if (error) {
-    return <div style={{ textAlign: 'center', marginTop: '20%', color: 'red' }}><h2>Error</h2><p>{error}</p></div>;
-  }
+      // Cleanup on unmount
+      return () => navigator.geolocation.clearWatch(watchId);
+    } else {
+      console.warn("Geolocation not supported");
+    }
+  }, [useLiveLocation]); // Re-run when toggle changes
+
+  // --- Render UI ---
+  if (loading)
+    return (
+      <div style={{ textAlign: "center", marginTop: "20%" }}>
+        <h2>Loading Map...</h2>
+      </div>
+    );
+  if (error)
+    return (
+      <div style={{ textAlign: "center", marginTop: "20%", color: "red" }}>
+        <h2>Error</h2>
+        <p>{error}</p>
+      </div>
+    );
 
   return (
-    <div style={{ height: "100vh", width: "100%" }}>
-      <MapContainer key={mapCenter.toString()} center={mapCenter} zoom={14} style={{ height: "100%", width: "100%" }}>
+    <div style={{ height: "100vh", width: "100%", position: "relative" }}>
+      {/* Toggle Button */}
+      <button
+        onClick={() => setUseLiveLocation(!useLiveLocation)}
+        style={{
+          position: "absolute",
+          top: "10px",
+          right: "10px",
+          zIndex: 9999,
+          padding: "10px 15px",
+          backgroundColor: useLiveLocation ? "#144139" : "#C8A46B",
+          color: useLiveLocation ? "#fff" : "#184C43",
+          border: "none",
+          borderRadius: "8px",
+          cursor: "pointer",
+          fontWeight: "bold",
+        }}
+      >
+        {useLiveLocation ? "📍 Using Live Location" : "🏠 Using Delivery Location"}
+      </button>
+
+      {/* Leaflet Map */}
+      <MapContainer
+        key={mapCenter.toString()}
+        center={mapCenter}
+        zoom={14}
+        style={{ height: "100%", width: "100%" }}
+      >
         <TileLayer
-          attribution="&copy; OpenStreetMap contributors"
+          attribution="© OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {/* Customer's Delivery Location Marker */}
-        <Marker position={mapCenter} icon={customerIcon}>
-          <Popup>📍 Your Saved Delivery Location</Popup>
-        </Marker>
+        {/* Saved Delivery Marker */}
+        {customerProfile?.deliveryLocation && (
+          <Marker position={mapCenter} icon={deliveryIcon}>
+            <Popup>🏠 Your Saved Delivery Location</Popup>
+          </Marker>
+        )}
 
-        {/* Radius Circle */}
+        {/* Circle around current view center */}
         <Circle
           center={mapCenter}
-          radius={searchRadius * 1000} // Radius in meters
+          radius={searchRadius * 1000}
           color="#144139"
           fillColor="#C8A46B"
-          fillOpacity={0.2}
+          fillOpacity={0.25}
         />
+
+        {/* Live Location Marker */}
+        {liveLocation && (
+          <Marker position={liveLocation} icon={liveIcon}>
+            <Popup>🟢 You are here (Live)</Popup>
+          </Marker>
+        )}
 
         {/* Shop Markers */}
         {shops.map((shop) => (
           <Marker
             key={shop._id}
             position={[
-              shop.location.coordinates[1], // Latitude
-              shop.location.coordinates[0], // Longitude
+              shop.location.coordinates[1],
+              shop.location.coordinates[0],
             ]}
             icon={shopIcon}
           >
