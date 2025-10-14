@@ -1,124 +1,101 @@
+// add_product/index.js
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
-const mongoose = require('mongoose');
-const Busboy = require('busboy');
+const multer = require('multer');
+const { Storage } = require('@google-cloud/storage');
+const util = require('util');
+const { format } = util;
 
-const connectDB = require('./common/db.js');
-const Shop = require('./common/models/Shop.js');
-const User = require('./common/models/User.js');
-const auth = require('./common/authMiddleware.js');
+// Import your common modules
+const connectDB = require('../common/db.js');
+const Shop = require('../common/models/Shop.js');
+const auth = require('../common/authMiddleware.js');
 
 const app = express();
+app.use(cors({ origin: true }));
+app.use(express.json());
 
-// ✅ CORS
-const allowedOrigins = [
-  'https://aroundu-frontend-164909903360.asia-south1.run.app',
-  'http://localhost:5173'
-];
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  if (req.method === 'OPTIONS') return res.status(204).send('');
-  next();
+// --- GCS & MULTER CONFIGURATION ---
+
+const storage = new Storage(); // GCS client
+const multer_upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB file size limit
 });
 
-// --- Ensure Upload Directory Exists ---
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+// Get bucket name from environment variables
+const bucket = storage.bucket(process.env.GCS_BUCKET_NAME);
 
-// --- POST / Add Product ---
-app.post('/', auth, async (req, res) => {
+// --- HELPER MIDDLEWARE for GCS UPLOAD ---
+const uploadToGcs = (req, res, next) => {
+    if (!req.file) return next();
+
+    const blob = bucket.file(Date.now() + "_" + req.file.originalname);
+    const blobStream = blob.createWriteStream({ resumable: false });
+
+    blobStream.on('error', (err) => next(err));
+
+    blobStream.on('finish', () => {
+        const publicUrl = format(`https://storage.googleapis.com/${bucket.name}/${blob.name}`);
+        req.file.gcsUrl = publicUrl; // Attach URL to request
+        next();
+    });
+
+    blobStream.end(req.file.buffer);
+};
+
+
+/**
+ * @route   POST /
+ * @desc    Add a new product with an image.
+ * @access  Private (Shopkeeper only)
+ */
+app.post('/', [auth, multer_upload.single('productImage'), uploadToGcs], async (req, res) => {
+  await connectDB();
+
   try {
-    await connectDB();
-
-    const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ msg: 'Unauthorized' });
-
-    const user = await User.findById(userId);
-    if (!user || user.role !== 'shopkeeper')
-      return res.status(403).json({ msg: 'Forbidden: Not a shopkeeper.' });
-
-    // --- Convert userId string to ObjectId ---
-    let objectUserId;
-    try {
-      objectUserId = new mongoose.Types.ObjectId(userId);
-    } catch {
-      objectUserId = userId.toString();
+    // 1. Validate role and file
+    if (req.user.role !== 'shopkeeper') {
+      return res.status(403).json({ msg: 'Forbidden: Action requires shopkeeper role.' });
+    }
+    if (!req.file || !req.file.gcsUrl) {
+      return res.status(400).json({ msg: 'Product image is required.' });
     }
 
-    // --- Find or create shop ---
-    let shop;
-    try {
-      shop = await Shop.findOne({ shopkeeperId: objectUserId });
-    } catch {
-      shop = await Shop.findOne({ shopkeeperId: userId.toString() });
+    // 2. Validate product data
+    const { name, description, price, stock } = req.body;
+    if (!name || !price || !stock) {
+      return res.status(400).json({ msg: 'Name, price, and stock are required fields.' });
     }
 
+    // 3. Find shop and create product
+    const shop = await Shop.findOne({ shopkeeperId: req.user.id });
     if (!shop) {
-      shop = new Shop({
-        shopkeeperId: objectUserId,
-        name: 'My Shop',
-        address: 'Default Address',
-        location: { type: 'Point', coordinates: [0, 0] },
-        products: []
-      });
-      await shop.save();
+      return res.status(404).json({ msg: 'Shop not found for this user.' });
     }
 
-    // --- Parse multipart/form-data using Busboy ---
-    const busboy = Busboy({ headers: req.headers });
-    const fields = {};
-    let uploadedFilePath = '';
+    const newProduct = {
+      name,
+      description: description || '',
+      price: parseFloat(price),
+      stock: parseInt(stock, 10),
+      imageUrl: req.file.gcsUrl // Use URL from our GCS middleware
+    };
 
-    busboy.on('file', (fieldname, file, filename) => {
-      if (!filename) return file.resume(); // skip empty file
-      const saveTo = path.join(
-        uploadsDir,
-        `${Date.now()}-${Math.round(Math.random() * 1e9)}-${filename}`
-      );
-      uploadedFilePath = `/uploads/${path.basename(saveTo)}`;
-      file.pipe(fs.createWriteStream(saveTo));
+    // 4. Save and respond
+    shop.products.push(newProduct);
+    await shop.save();
+
+    res.status(201).json({
+        msg: 'Product added successfully!',
+        newProduct: shop.products[shop.products.length - 1]
     });
-
-    busboy.on('field', (fieldname, value) => {
-      fields[fieldname] = value;
-    });
-
-    busboy.on('finish', async () => {
-      const { name, description = '', price, stock } = fields;
-
-      if (!name || !price || !stock)
-        return res.status(400).json({ msg: 'Missing required fields.' });
-
-      const newProduct = {
-        name,
-        description,
-        price: Number(price),
-        stock: Number(stock),
-        imageUrl: uploadedFilePath || ''
-      };
-
-      shop.products.push(newProduct);
-      await shop.save();
-
-      res.status(201).json({
-        msg: 'Product added successfully.',
-        product: shop.products.at(-1)
-      });
-    });
-
-    req.pipe(busboy);
 
   } catch (err) {
-    console.error('🔥 Server error:', err);
-    res.status(500).json({ msg: 'Internal Server Error', error: err.message });
+    console.error("Error in add_product:", err);
+    res.status(500).send('Server Error');
   }
 });
 
-// --- Export for Cloud Function ---
+// Export the Express app for GCP
 exports.add_product = app;

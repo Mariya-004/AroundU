@@ -1,3 +1,4 @@
+// common/models/Shop.js
 const mongoose = require('mongoose');
 
 const productSchema = new mongoose.Schema({
@@ -5,7 +6,7 @@ const productSchema = new mongoose.Schema({
   description: { type: String },
   price: { type: Number, required: true },
   stock: { type: Number, required: true },
-  imageUrl: { type: String } // <-- Add this line
+  imageUrl: { type: String, required: true }, // <-- ADD THIS LINE
 });
 
 const shopSchema = new mongoose.Schema({
@@ -14,12 +15,11 @@ const shopSchema = new mongoose.Schema({
   address: { type: String, required: true },
   location: {
     type: { type: String, enum: ['Point'], default: 'Point' },
-    coordinates: { type: [Number], required: true } // [longitude, latitude]
+    coordinates: { type: [Number], required: true }
   },
   products: [productSchema],
 }, { timestamps: true });
 
-// Create 2dsphere index for geospatial queries
 shopSchema.index({ location: '2dsphere' });
 
 module.exports = mongoose.model('Shop', shopSchema);
