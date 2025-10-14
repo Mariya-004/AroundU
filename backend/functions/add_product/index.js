@@ -7,9 +7,9 @@ const util = require('util');
 const { format } = util;
 
 // Import your common modules
-const connectDB = require('../common/db.js');
-const Shop = require('../common/models/Shop.js');
-const auth = require('../common/authMiddleware.js');
+const connectDB = require('./common/db.js');
+const Shop = require('./common/models/Shop.js');
+const auth = require('./common/authMiddleware.js');
 
 const app = express();
 app.use(cors({ origin: true }));
