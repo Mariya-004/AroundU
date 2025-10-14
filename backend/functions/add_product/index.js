@@ -11,17 +11,27 @@ const User = require('./common/models/User.js');
 const auth = require('./common/authMiddleware.js');
 
 const app = express();
-app.use(cors({ origin: true }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// ✅ CORS
+const allowedOrigins = [
+  'https://aroundu-frontend-164909903360.asia-south1.run.app',
+  'http://localhost:5173'
+];
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  if (req.method === 'OPTIONS') return res.status(204).send('');
+  next();
+});
 
 // --- Ensure Upload Directory Exists ---
 const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
-// --- POST /  Add Product ---
+// --- POST / Add Product ---
 app.post('/', auth, async (req, res) => {
   try {
     await connectDB();
@@ -33,13 +43,23 @@ app.post('/', auth, async (req, res) => {
     if (!user || user.role !== 'shopkeeper')
       return res.status(403).json({ msg: 'Forbidden: Not a shopkeeper.' });
 
-    // --- Convert userId string to ObjectId for MongoDB query ---
-    const objectUserId = mongoose.Types.ObjectId(userId);
+    // --- Convert userId string to ObjectId ---
+    let objectUserId;
+    try {
+      objectUserId = new mongoose.Types.ObjectId(userId);
+    } catch {
+      objectUserId = userId.toString();
+    }
 
     // --- Find or create shop ---
-    let shop = await Shop.findOne({ shopkeeperId: objectUserId });
+    let shop;
+    try {
+      shop = await Shop.findOne({ shopkeeperId: objectUserId });
+    } catch {
+      shop = await Shop.findOne({ shopkeeperId: userId.toString() });
+    }
+
     if (!shop) {
-      // Auto-create shop with default values
       shop = new Shop({
         shopkeeperId: objectUserId,
         name: 'My Shop',
@@ -57,15 +77,12 @@ app.post('/', auth, async (req, res) => {
 
     busboy.on('file', (fieldname, file, filename) => {
       if (!filename) return file.resume(); // skip empty file
-
       const saveTo = path.join(
         uploadsDir,
         `${Date.now()}-${Math.round(Math.random() * 1e9)}-${filename}`
       );
       uploadedFilePath = `/uploads/${path.basename(saveTo)}`;
-
-      const writeStream = fs.createWriteStream(saveTo);
-      file.pipe(writeStream);
+      file.pipe(fs.createWriteStream(saveTo));
     });
 
     busboy.on('field', (fieldname, value) => {
@@ -73,7 +90,7 @@ app.post('/', auth, async (req, res) => {
     });
 
     busboy.on('finish', async () => {
-      const { name, description, price, stock } = fields;
+      const { name, description = '', price, stock } = fields;
 
       if (!name || !price || !stock)
         return res.status(400).json({ msg: 'Missing required fields.' });
@@ -83,7 +100,7 @@ app.post('/', auth, async (req, res) => {
         description,
         price: Number(price),
         stock: Number(stock),
-        imageUrl: uploadedFilePath || '',
+        imageUrl: uploadedFilePath || ''
       };
 
       shop.products.push(newProduct);
@@ -91,19 +108,17 @@ app.post('/', auth, async (req, res) => {
 
       res.status(201).json({
         msg: 'Product added successfully.',
-        product: shop.products.at(-1),
+        product: shop.products.at(-1)
       });
     });
 
     req.pipe(busboy);
+
   } catch (err) {
     console.error('🔥 Server error:', err);
-    res.status(500).json({
-      msg: 'Internal Server Error',
-      error: err.message,
-    });
+    res.status(500).json({ msg: 'Internal Server Error', error: err.message });
   }
 });
 
-// --- Export for Cloud Function (matches YAML entry point) ---
+// --- Export for Cloud Function ---
 exports.add_product = app;
