@@ -1,119 +1,84 @@
 const express = require('express');
 const cors = require('cors');
-const Busboy = require('busboy');
 const { Storage } = require('@google-cloud/storage');
-const util = require('util');
-const { format } = util;
+const { formidable } = require('formidable'); // <-- Import formidable
 
 // Common modules
-const connectDB = require('./common/db.js');
-const Shop = require('./common/models/Shop.js'); // Adjusted path for clarity
-const auth = require('./common/authMiddleware.js');
+const connectDB = require('../common/db.js');
+const Shop = require('../common/models/Shop.js');
+const auth = require('../common/authMiddleware.js');
 
 const app = express();
 app.use(cors({ origin: true }));
-// We do NOT use express.json() here, as it can interfere with busboy reading the stream.
 
 // --- GCS Configuration ---
 const storage = new Storage();
 const bucket = storage.bucket(process.env.GCS_BUCKET_NAME);
 
 
-// --- NEW PROMISE-BASED BUSBOY MIDDLEWARE ---
-const processFormData = (req, res, next) => {
-  const bb = Busboy({ headers: req.headers });
+// --- FORMIDABLE MIDDLEWARE ---
+const formidableMiddleware = (req, res, next) => {
+  const form = formidable({});
 
-  const fields = {};
-  const filePromises = [];
-
-  bb.on('field', (fieldname, val) => {
-    fields[fieldname] = val;
-  });
-
-  bb.on('file', (fieldname, file, GCSfile) => {
-    if (fieldname === 'productImage') {
-      const gcsFileName = `${Date.now()}_${GCSfile.filename}`;
-      const blob = bucket.file(gcsFileName);
-      const blobStream = blob.createWriteStream({ resumable: false });
-
-      file.pipe(blobStream);
-
-      const filePromise = new Promise((resolve, reject) => {
-        blobStream.on('finish', () => {
-          const publicUrl = format(`https://storage.googleapis.com/${bucket.name}/${blob.name}`);
-          resolve({ fieldname, publicUrl });
-        });
-        blobStream.on('error', (err) => {
-          reject(`File upload error: ${err}`);
-        });
-      });
-      filePromises.push(filePromise);
-    } else {
-      file.resume();
-    }
-  });
-
-  bb.on('finish', async () => {
-    try {
-      const files = await Promise.all(filePromises);
-      // Attach fields and file data to the request object
-      req.body = fields;
-      req.files = files; // You can access the URL via req.files[0].publicUrl
-      next();
-    } catch (err) {
+  form.parse(req, (err, fields, files) => {
+    if (err) {
       next(err);
+      return;
     }
+    // Attach parsed fields and files to the request object
+    req.body = fields;
+    req.files = files;
+    next();
   });
-
-  bb.on('error', err => {
-    next(err);
-  });
-  
-  // End the stream if the request is closed prematurely
-  req.on('close', () => {
-    bb.destroy();
-  });
-
-  req.pipe(bb);
 };
-
 
 /**
  * @route   POST /
- * @desc    Add a new product.
- * @access  Private (Shopkeeper only)
+ * @desc    Add a new product with an image.
+ * @access  Private (Requires shopkeeper role)
  */
-app.post('/', [auth, processFormData], async (req, res) => {
+app.post('/', [auth, formidableMiddleware], async (req, res) => {
   try {
-    // --- Business logic is now clean and simple ---
     await connectDB();
 
+    // 1. Validate user role
     if (req.user.role !== 'shopkeeper') {
       return res.status(403).json({ msg: 'Forbidden: Action requires shopkeeper role.' });
     }
-    
-    // File URL comes from our new middleware
-    const imageUrl = req.files && req.files.length > 0 ? req.files[0].publicUrl : null;
-    if (!imageUrl) {
-        return res.status(400).json({ msg: 'Product image is required.' });
-    }
 
+    // 2. Get file and fields from the formidable middleware
     const { name, description, price, stock } = req.body;
+    const imageFile = req.files.productImage; // Formidable uses the field name as the key
+
+    // 3. Validate input
+    if (!imageFile || !imageFile[0]) {
+      return res.status(400).json({ msg: 'Product image is required.' });
+    }
     if (!name || !price || !stock) {
       return res.status(400).json({ msg: 'Name, price, and stock are required fields.' });
     }
+
+    // 4. Upload file to GCS
+    const uploadedFile = imageFile[0];
+    const gcsFileName = `${Date.now()}_${uploadedFile.originalFilename}`;
     
+    await bucket.upload(uploadedFile.filepath, {
+        destination: gcsFileName,
+    });
+    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${gcsFileName}`;
+
+    // 5. Find shop and save the new product
     const shop = await Shop.findOne({ shopkeeperId: req.user.id });
     if (!shop) {
       return res.status(404).json({ msg: 'Shop not found for this user.' });
     }
     
     const newProduct = {
-      name,
-      description: description || '',
-      price: parseFloat(price),
-      stock: parseInt(stock, 10),
-      imageUrl: imageUrl,
+      name: name[0], // Formidable wraps fields in arrays
+      description: description ? description[0] : '',
+      price: parseFloat(price[0]),
+      stock: parseInt(stock[0], 10),
+      imageUrl: publicUrl,
     };
     
     shop.products.push(newProduct);
