@@ -4,9 +4,9 @@ const { Storage } = require('@google-cloud/storage');
 const { formidable } = require('formidable'); // <-- Import formidable
 
 // Common modules
-const connectDB = require('../common/db.js');
-const Shop = require('../common/models/Shop.js');
-const auth = require('../common/authMiddleware.js');
+const connectDB = require('./common/db.js');
+const Shop = require('./common/models/Shop.js');
+const auth = require('./common/authMiddleware.js');
 
 const app = express();
 app.use(cors({ origin: true }));
