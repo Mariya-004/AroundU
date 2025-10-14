@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const mongoose = require('mongoose');
 const Busboy = require('busboy');
 
 const connectDB = require('./common/db.js');
@@ -20,7 +21,7 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// --- Endpoint using Busboy ---
+// --- POST /  Add Product ---
 app.post('/', auth, async (req, res) => {
   try {
     await connectDB();
@@ -32,16 +33,30 @@ app.post('/', auth, async (req, res) => {
     if (!user || user.role !== 'shopkeeper')
       return res.status(403).json({ msg: 'Forbidden: Not a shopkeeper.' });
 
-    const shop = await Shop.findOne({ shopkeeperId: userId });
-    if (!shop) return res.status(404).json({ msg: 'Shop not found.' });
+    // --- Convert userId string to ObjectId for MongoDB query ---
+    const objectUserId = mongoose.Types.ObjectId(userId);
 
-    // --- Parse multipart form ---
+    // --- Find or create shop ---
+    let shop = await Shop.findOne({ shopkeeperId: objectUserId });
+    if (!shop) {
+      // Auto-create shop with default values
+      shop = new Shop({
+        shopkeeperId: objectUserId,
+        name: 'My Shop',
+        address: 'Default Address',
+        location: { type: 'Point', coordinates: [0, 0] },
+        products: []
+      });
+      await shop.save();
+    }
+
+    // --- Parse multipart/form-data using Busboy ---
     const busboy = Busboy({ headers: req.headers });
     const fields = {};
     let uploadedFilePath = '';
 
     busboy.on('file', (fieldname, file, filename) => {
-      if (!filename) return file.resume(); // Skip empty file field
+      if (!filename) return file.resume(); // skip empty file
 
       const saveTo = path.join(
         uploadsDir,
@@ -59,6 +74,7 @@ app.post('/', auth, async (req, res) => {
 
     busboy.on('finish', async () => {
       const { name, description, price, stock } = fields;
+
       if (!name || !price || !stock)
         return res.status(400).json({ msg: 'Missing required fields.' });
 
@@ -89,5 +105,5 @@ app.post('/', auth, async (req, res) => {
   }
 });
 
-// --- Export as Cloud Function ---
+// --- Export for Cloud Function (matches YAML entry point) ---
 exports.add_product = app;
