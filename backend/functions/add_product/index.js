@@ -90,5 +90,4 @@ app.post('/', auth, async (req, res) => {
 });
 
 // --- Export as Cloud Function ---
-const functions = require('@google-cloud/functions-framework');
-functions.http('add_product', app);
+exports.add_product = app;
