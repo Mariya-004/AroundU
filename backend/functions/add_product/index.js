@@ -1,42 +1,62 @@
 const express = require('express');
 const cors = require('cors');
 const { Storage } = require('@google-cloud/storage');
-const { formidable } = require('formidable'); // <-- Import formidable
+const formidable = require('formidable');
+const mongoose = require('mongoose');
 
-// Common modules
 const connectDB = require('./common/db.js');
 const Shop = require('./common/models/Shop.js');
 const auth = require('./common/authMiddleware.js');
 
 const app = express();
-app.use(cors({ origin: true }));
+
+// --- CORS Configuration ---
+const FRONTEND_URL = 'https://aroundu-frontend-164909903360.asia-south1.run.app';
+
+app.use(cors({
+  origin: FRONTEND_URL,
+  methods: ['GET','POST','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization'],
+}));
+
+// Handle OPTIONS preflight requests
+app.options('*', (req, res) => {
+  res.set('Access-Control-Allow-Origin', FRONTEND_URL);
+  res.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.status(204).send('');
+});
 
 // --- GCS Configuration ---
 const storage = new Storage();
 const bucket = storage.bucket(process.env.GCS_BUCKET_NAME);
 
-
-// --- FORMIDABLE MIDDLEWARE ---
+// --- Formidable Middleware ---
 const formidableMiddleware = (req, res, next) => {
-  const form = formidable({});
+  const form = formidable({
+    maxFileSize: 5 * 1024 * 1024, // 5 MB limit
+    multiples: false,
+  });
+
+  // Timeout if the form never finishes
+  const timeout = setTimeout(() => {
+    res.status(408).json({ msg: 'Request timeout while uploading file.' });
+    form.emit('error', new Error('Form timeout'));
+  }, 20000); // 20s
 
   form.parse(req, (err, fields, files) => {
+    clearTimeout(timeout);
     if (err) {
-      next(err);
-      return;
+      console.error('Formidable error:', err);
+      return res.status(400).json({ msg: 'Invalid form submission', error: err.message });
     }
-    // Attach parsed fields and files to the request object
     req.body = fields;
     req.files = files;
     next();
   });
 };
 
-/**
- * @route   POST /
- * @desc    Add a new product with an image.
- * @access  Private (Requires shopkeeper role)
- */
+// --- POST / Add Product ---
 app.post('/', [auth, formidableMiddleware], async (req, res) => {
   try {
     await connectDB();
@@ -46,52 +66,62 @@ app.post('/', [auth, formidableMiddleware], async (req, res) => {
       return res.status(403).json({ msg: 'Forbidden: Action requires shopkeeper role.' });
     }
 
-    // 2. Get file and fields from the formidable middleware
+    // 2. Extract fields and file
     const { name, description, price, stock } = req.body;
-    const imageFile = req.files.productImage; // Formidable uses the field name as the key
+    let imageFile = req.files?.productImage;
 
-    // 3. Validate input
-    if (!imageFile || !imageFile[0]) {
+    if (!imageFile) {
       return res.status(400).json({ msg: 'Product image is required.' });
     }
+
+    // Handle single file (Formidable may wrap in array)
+    imageFile = Array.isArray(imageFile) ? imageFile[0] : imageFile;
+
     if (!name || !price || !stock) {
-      return res.status(400).json({ msg: 'Name, price, and stock are required fields.' });
+      return res.status(400).json({ msg: 'Name, price, and stock are required.' });
     }
 
-    // 4. Upload file to GCS
-    const uploadedFile = imageFile[0];
-    const gcsFileName = `${Date.now()}_${uploadedFile.originalFilename}`;
-    
-    await bucket.upload(uploadedFile.filepath, {
-        destination: gcsFileName,
+    // 3. Upload to GCS
+    const gcsFileName = `${Date.now()}_${imageFile.originalFilename}`;
+    await bucket.upload(imageFile.filepath, {
+      destination: gcsFileName,
     });
     const publicUrl = `https://storage.googleapis.com/${bucket.name}/${gcsFileName}`;
 
-    // 5. Find shop and save the new product
-    const shop = await Shop.findOne({ shopkeeperId: req.user.id });
+    // 4. Find or auto-create shop
+    let shop = await Shop.findOne({ shopkeeperId: mongoose.Types.ObjectId(req.user.id) });
     if (!shop) {
-      return res.status(404).json({ msg: 'Shop not found for this user.' });
+      shop = new Shop({
+        shopkeeperId: mongoose.Types.ObjectId(req.user.id),
+        name: 'My Shop',
+        address: 'Default Address',
+        location: { type: 'Point', coordinates: [0, 0] },
+        products: [],
+      });
+      await shop.save();
     }
-    
+
+    // 5. Save new product
+    const getField = f => Array.isArray(f) ? f[0] : f;
     const newProduct = {
-      name: name[0], // Formidable wraps fields in arrays
-      description: description ? description[0] : '',
-      price: parseFloat(price[0]),
-      stock: parseInt(stock[0], 10),
+      name: getField(name),
+      description: description ? getField(description) : '',
+      price: parseFloat(getField(price)),
+      stock: parseInt(getField(stock), 10),
       imageUrl: publicUrl,
     };
-    
+
     shop.products.push(newProduct);
     await shop.save();
 
-    res.status(201).json({
-        msg: 'Product added successfully!',
-        newProduct: shop.products[shop.products.length - 1]
+    return res.status(201).json({
+      msg: 'Product added successfully!',
+      newProduct: shop.products[shop.products.length - 1],
     });
 
   } catch (err) {
-    console.error("Error in add_product endpoint:", err);
-    res.status(500).send('Server Error');
+    console.error('Error in add_product endpoint:', err);
+    return res.status(500).json({ msg: 'Server Error', error: err.message });
   }
 });
 
