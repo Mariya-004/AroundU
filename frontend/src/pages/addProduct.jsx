@@ -16,15 +16,21 @@ export default function AddProduct() {
     setLoading(true);
     setMsg('');
 
+    // Basic validation to ensure an image is selected
+    if (!imageFile) {
+        setMsg('Please select a product image.');
+        setLoading(false);
+        return;
+    }
+
     try {
       const formData = new FormData();
       formData.append('name', name);
       formData.append('description', description);
       formData.append('price', price);
       formData.append('stock', stock);
-      if (imageFile) {
-        formData.append('imageFile', imageFile);
-      }
+      // --- THIS IS THE CORRECTED LINE ---
+      formData.append('productImage', imageFile); // The key must match the backend ('productImage')
 
       const token = localStorage.getItem('token');
       const res = await fetch('https://asia-south1-aroundu-473113.cloudfunctions.net/add_product', {
@@ -36,13 +42,13 @@ export default function AddProduct() {
         body: formData,
       });
 
+      const responseData = await res.json();
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.msg || 'Failed to add product');
+        // Use the error message from the backend, or a default one
+        throw new Error(responseData.msg || 'Failed to add product');
       }
 
-      const newProduct = await res.json();
-      setMsg(`Product "${newProduct.name}" added successfully!`);
+      setMsg(`Product "${responseData.newProduct.name}" added successfully!`);
 
       // Redirect back to the dashboard after a short delay
       setTimeout(() => {
@@ -92,15 +98,16 @@ export default function AddProduct() {
           required
           style={{ marginBottom: 16, width: '100%', padding: 10, borderRadius: 8, border: '1px solid #e4e4e4' }}
         />
-        <label style={{ marginBottom: 8, fontWeight: 'bold' }}>Product Image (Optional)</label>
+        <label style={{ marginBottom: 8, fontWeight: 'bold' }}>Product Image</label>
         <input
           type="file"
           accept="image/*"
           onChange={e => setImageFile(e.target.files[0])}
+          required // Made this required to match backend logic
           style={{ marginBottom: 16 }}
         />
         
-        {msg && <p style={{ color: msg.includes('success') ? 'green' : 'red' }}>{msg}</p>}
+        {msg && <p style={{ color: msg.includes('successfully') ? 'green' : 'red' }}>{msg}</p>}
 
         <button
           type="submit"
@@ -114,7 +121,8 @@ export default function AddProduct() {
             fontWeight: 700,
             fontSize: 17,
             width: '100%',
-            cursor: loading ? 'not-allowed' : 'pointer'
+            cursor: loading ? 'not-allowed' : 'pointer',
+            opacity: loading ? 0.6 : 1
           }}
         >
           {loading ? 'Adding Product...' : 'Add Product'}
