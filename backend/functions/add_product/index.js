@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { Storage } = require('@google-cloud/storage');
-const { formidable } = require('formidable');
+const formidable  = require('formidable');
 const mongoose = require('mongoose');
 
 const connectDB = require('./common/db.js');
