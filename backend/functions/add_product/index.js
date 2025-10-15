@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { Storage } = require('@google-cloud/storage');
-const formidable = require('formidable');
+const { formidable } = require('formidable');
 const mongoose = require('mongoose');
 
 // --- Assume common modules are two levels up from the function directory ---
@@ -12,7 +12,7 @@ const auth = require('./common/authMiddleware.js');
 
 const app = express();
 
-// --- CORRECTED CORS CONFIGURATION ---
+// --- CORS Configuration ---
 const FRONTEND_URL = 'https://aroundu-frontend-164909903360.asia-south1.run.app';
 app.use(cors({
   origin: FRONTEND_URL,
@@ -20,10 +20,11 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// --- Connect to Database on Cold Start ---
+// --- OPTIMIZATION: Connect to Database on Cold Start ---
+// This promise is created once when the function instance starts.
 const dbConnectionPromise = connectDB().catch(err => {
   console.error('FATAL: Failed to connect to MongoDB on initial load', err);
-  process.exit(1); // Exit if DB can't connect on startup
+  process.exit(1); // Exit if the DB can't connect on startup
 });
 
 // --- GCS Configuration ---
@@ -36,7 +37,7 @@ const bucket = storage.bucket(GCS_BUCKET_NAME);
 
 // --- Formidable Middleware ---
 const formidableMiddleware = (req, res, next) => {
-  const form = new formidable.Formidable({
+  const form = formidable({
     multiples: false,
     uploadDir: '/tmp',
     maxFileSize: 5 * 1024 * 1024,
@@ -60,7 +61,7 @@ const formidableMiddleware = (req, res, next) => {
  */
 app.post('/', auth, formidableMiddleware, async (req, res) => {
   try {
-    // Ensure the initial DB connection is ready
+    // Ensure the initial DB connection is ready before proceeding.
     await dbConnectionPromise;
 
     const user = await User.findById(req.user.id);
