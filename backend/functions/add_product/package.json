@@ -1,5 +1,5 @@
 {
-  "name": "add-product-api",
+  "name": "add_product",
   "version": "1.0.0",
   "description": "API for shopkeepers to add products with image uploads.",
   "main": "index.js",
