@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { Storage } = require('@google-cloud/storage');
-const formidable = require('formidable');
+const { formidable } = require('formidable');
 const mongoose = require('mongoose');
 
 // Adjust paths to go up one directory level to the common directories
