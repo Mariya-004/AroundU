@@ -21,7 +21,7 @@ steps:
       - '--entry-point=add_product' # Matches the exported function name in your code
       - '--trigger-http'
       - '--allow-unauthenticated'
-      - '--timeout=120s'
+      - '--timeout=300s'
       # --- ADD THE BUCKET NAME VARIABLE HERE ---
       - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET,GCS_BUCKET_NAME=$_GCS_BUCKET_NAME'
 
