@@ -1,10 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const { Storage } = require('@google-cloud/storage');
-const { formidable } = require('formidable');
+const formidable = require('formidable');
 const mongoose = require('mongoose');
 
-// Common modules
+// --- Assume common modules are two levels up from the function directory ---
 const connectDB = require('./common/db.js');
 const Shop = require('./common/models/Shop.js');
 const User = require('./common/models/User.js');
@@ -12,27 +12,39 @@ const auth = require('./common/authMiddleware.js');
 
 const app = express();
 
-// Enable CORS
-app.use(cors({ origin: true }));
+// --- CORRECTED CORS CONFIGURATION ---
+const FRONTEND_URL = 'https://aroundu-frontend-164909903360.asia-south1.run.app';
+app.use(cors({
+  origin: FRONTEND_URL,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
-// --- Google Cloud Storage Configuration ---
+// --- Connect to Database on Cold Start ---
+const dbConnectionPromise = connectDB().catch(err => {
+  console.error('FATAL: Failed to connect to MongoDB on initial load', err);
+  process.exit(1); // Exit if DB can't connect on startup
+});
+
+// --- GCS Configuration ---
+const GCS_BUCKET_NAME = process.env.GCS_BUCKET_NAME;
+if (!GCS_BUCKET_NAME) {
+  throw new Error("FATAL ERROR: GCS_BUCKET_NAME environment variable is not set.");
+}
 const storage = new Storage();
-const bucket = storage.bucket(process.env.GCS_BUCKET_NAME);
+const bucket = storage.bucket(GCS_BUCKET_NAME);
 
-/**
- * Middleware for handling multipart/form-data using formidable.
- */
+// --- Formidable Middleware ---
 const formidableMiddleware = (req, res, next) => {
-  const form = formidable({
+  const form = new formidable.Formidable({
     multiples: false,
-    uploadDir: '/tmp', // Cloud Functions can only write to /tmp
-    maxFileSize: 5 * 1024 * 1024, // 5 MB limit
+    uploadDir: '/tmp',
+    maxFileSize: 5 * 1024 * 1024,
     keepExtensions: true,
   });
 
   form.parse(req, (err, fields, files) => {
     if (err) {
-      console.error('Formidable parsing error:', err);
       return res.status(400).json({ msg: 'Error processing form data.', error: err.message });
     }
     req.body = fields;
@@ -42,51 +54,40 @@ const formidableMiddleware = (req, res, next) => {
 };
 
 /**
- * POST /
- * Add a new product (with image) to the shopkeeper's shop.
+ * @route   POST /
+ * @desc    Add a new product with an image to the shopkeeper's shop
+ * @access  Private
  */
 app.post('/', auth, formidableMiddleware, async (req, res) => {
-  await connectDB();
-
   try {
-    // 1. Verify user role
+    // Ensure the initial DB connection is ready
+    await dbConnectionPromise;
+
     const user = await User.findById(req.user.id);
     if (!user || user.role !== 'shopkeeper') {
       return res.status(403).json({ msg: 'Forbidden: User is not a shopkeeper.' });
     }
 
-    // 2. Extract product data
     const { name, description, price, stock } = req.body;
     const imageFile = req.files.productImage;
 
-    if (!name || !price || !stock) {
-      return res.status(400).json({ msg: 'Product name, price, and stock are required.' });
-    }
-    if (!imageFile) {
-      return res.status(400).json({ msg: 'Product image is required.' });
+    if (!name || !price || !stock || !imageFile) {
+      return res.status(400).json({ msg: 'Product name, price, stock, and an image are required.' });
     }
 
-    // 3. Upload image to GCS
     const gcsFileName = `${req.user.id}-${Date.now()}-${imageFile.originalFilename}`;
-    console.log('Uploading file to GCS:', imageFile.filepath, '→', gcsFileName);
-
     await bucket.upload(imageFile.filepath, {
       destination: gcsFileName,
       metadata: { contentType: imageFile.mimetype },
     });
-
     const publicUrl = `https://storage.googleapis.com/${bucket.name}/${gcsFileName}`;
-    console.log('✅ Upload complete:', publicUrl);
 
-    // 4. Find or validate shop
     let shop = await Shop.findOne({ shopkeeperId: req.user.id });
     if (!shop) {
       return res.status(404).json({ msg: 'Shop not found. Please create a shop profile first.' });
     }
 
-    // 5. Create product
     const getField = f => (Array.isArray(f) ? f[0] : f);
-
     const newProduct = {
       name: getField(name),
       description: getField(description) || '',
@@ -97,7 +98,7 @@ app.post('/', auth, formidableMiddleware, async (req, res) => {
 
     shop.products.push(newProduct);
     await shop.save();
-
+    
     const addedProduct = shop.products[shop.products.length - 1];
 
     res.status(201).json({
@@ -106,9 +107,10 @@ app.post('/', auth, formidableMiddleware, async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Error adding product:', err);
+    console.error("Error adding product:", { message: err.message });
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 });
 
 exports.add_product = app;
+
