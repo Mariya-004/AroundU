@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { Storage } = require('@google-cloud/storage');
-const {formidable} = require('formidable');
+const { formidable } = require('formidable');
 const mongoose = require('mongoose');
 
 const connectDB = require('./common/db.js');
@@ -15,8 +15,8 @@ const FRONTEND_URL = 'https://aroundu-frontend-164909903360.asia-south1.run.app'
 
 app.use(cors({
   origin: FRONTEND_URL,
-  methods: ['GET','POST','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization'],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 // Handle OPTIONS preflight requests
@@ -34,24 +34,37 @@ const bucket = storage.bucket(process.env.GCS_BUCKET_NAME);
 // --- Formidable Middleware ---
 const formidableMiddleware = (req, res, next) => {
   const form = formidable({
+    uploadDir: '/tmp', // ✅ Cloud Functions can only write to /tmp
     maxFileSize: 5 * 1024 * 1024, // 5 MB limit
     multiples: false,
+    keepExtensions: true,
   });
 
-  // Timeout if the form never finishes
+  let responded = false;
+
+  // Timeout if form never finishes (increase to 60s for safety)
   const timeout = setTimeout(() => {
-    res.status(408).json({ msg: 'Request timeout while uploading file.' });
-    form.emit('error', new Error('Form timeout'));
-  }, 20000); // 20s
+    if (!responded) {
+      responded = true;
+      console.error('Formidable timeout – sending 408');
+      res.status(408).json({ msg: 'Request timeout while uploading file.' });
+      form.emit('error', new Error('Form timeout'));
+    }
+  }, 60000); // 60s timeout to allow slow cold starts or uploads
 
   form.parse(req, (err, fields, files) => {
+    if (responded) return;
     clearTimeout(timeout);
+
     if (err) {
+      responded = true;
       console.error('Formidable error:', err);
       return res.status(400).json({ msg: 'Invalid form submission', error: err.message });
     }
+
     req.body = fields;
     req.files = files;
+    responded = true;
     next();
   });
 };
