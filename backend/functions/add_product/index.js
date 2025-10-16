@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { Storage } = require('@google-cloud/storage');
-const formidable = require('formidable');
+const formidable = require('formidable'); // ✅ Correct import for v3+
 const mongoose = require('mongoose');
 
 const connectDB = require('./common/db.js');
@@ -12,16 +12,20 @@ const app = express();
 
 // --- CORS Configuration ---
 const FRONTEND_URL = 'https://aroundu-frontend-164909903360.asia-south1.run.app';
-app.use(cors({ origin: FRONTEND_URL }));
+app.use(cors({
+  origin: FRONTEND_URL,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
 // --- GCS Configuration ---
 const storage = new Storage();
-const bucket = storage.bucket('aroundu-products'); // ✅ use bucket name only (not link)
+const bucket = storage.bucket(process.env.GCS_BUCKET_NAME);
 
 // --- Formidable Middleware ---
 const formidableMiddleware = (req, res, next) => {
   const form = formidable({
-    uploadDir: '/tmp', // Cloud Function writable directory
+    uploadDir: '/tmp',
     maxFileSize: 5 * 1024 * 1024, // 5MB
     multiples: false,
     keepExtensions: true,
@@ -32,7 +36,6 @@ const formidableMiddleware = (req, res, next) => {
       console.error('Formidable error:', err);
       return res.status(400).json({ msg: 'Invalid form submission', error: err.message });
     }
-
     req.body = fields;
     req.files = files;
     next();
@@ -45,36 +48,28 @@ app.post('/', [auth, formidableMiddleware], async (req, res) => {
     await connectDB();
 
     if (req.user.role !== 'shopkeeper') {
-      return res.status(403).json({ msg: 'Forbidden: Requires shopkeeper role.' });
+      return res.status(403).json({ msg: 'Forbidden: Action requires shopkeeper role.' });
     }
 
-    // Handle fields
-    const name = req.body.name?.[0] || req.body.name;
-    const description = req.body.description?.[0] || req.body.description;
-    const price = parseFloat(req.body.price?.[0] || req.body.price);
-    const stock = parseInt(req.body.stock?.[0] || req.body.stock, 10);
-    const imageFile = req.files.productImage?.[0] || req.files.productImage;
+    const { name, description, price, stock } = req.body;
+    const imageFile = req.files.productImage;
 
-    if (!name || !price || !stock || !imageFile) {
-      return res.status(400).json({ msg: 'Missing required fields or image.' });
+    if (!imageFile) {
+      return res.status(400).json({ msg: 'Product image is required.' });
+    }
+    if (!name || !price || !stock) {
+      return res.status(400).json({ msg: 'Name, price, and stock are required.' });
     }
 
-    // Upload to GCS
-    const gcsFileName = `${Date.now()}_${imageFile.originalFilename}`;
-    await bucket.upload(imageFile.filepath, {
-      destination: gcsFileName,
-      metadata: { contentType: imageFile.mimetype },
-    });
-
-    // Make file public
-    await bucket.file(gcsFileName).makePublic();
+    const file = Array.isArray(imageFile) ? imageFile[0] : imageFile;
+    const gcsFileName = `${Date.now()}_${file.originalFilename}`;
+    await bucket.upload(file.filepath, { destination: gcsFileName });
     const publicUrl = `https://storage.googleapis.com/${bucket.name}/${gcsFileName}`;
 
-    // Find or create shop
-    let shop = await Shop.findOne({ shopkeeperId: req.user.id });
+    let shop = await Shop.findOne({ shopkeeperId: mongoose.Types.ObjectId(req.user.id) });
     if (!shop) {
       shop = new Shop({
-        shopkeeperId: req.user.id,
+        shopkeeperId: mongoose.Types.ObjectId(req.user.id),
         name: 'My Shop',
         address: 'Default Address',
         location: { type: 'Point', coordinates: [0, 0] },
@@ -82,25 +77,25 @@ app.post('/', [auth, formidableMiddleware], async (req, res) => {
       });
     }
 
-    // Add new product
     const newProduct = {
-      name,
-      description: description || '',
-      price,
-      stock,
+      name: Array.isArray(name) ? name[0] : name,
+      description: Array.isArray(description) ? description[0] : description || '',
+      price: parseFloat(Array.isArray(price) ? price[0] : price),
+      stock: parseInt(Array.isArray(stock) ? stock[0] : stock, 10),
       imageUrl: publicUrl,
     };
 
     shop.products.push(newProduct);
     await shop.save();
 
-    return res.status(201).json({
-      msg: '✅ Product added successfully!',
-      newProduct,
+    res.status(201).json({
+      msg: 'Product added successfully!',
+      newProduct: shop.products.at(-1),
     });
+
   } catch (err) {
-    console.error('🔥 Server error:', err);
-    return res.status(500).json({ msg: 'Server error', error: err.message });
+    console.error('Error in add_product endpoint:', err);
+    res.status(500).json({ msg: 'Server Error', error: err.message });
   }
 });
 

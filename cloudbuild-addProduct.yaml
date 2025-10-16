@@ -1,29 +1,34 @@
-# This Cloud Build configuration is for deploying the 'add_product'
-# Google Cloud Function.
+# This Cloud Build configuration deploys the 'add_product' Cloud Function (Gen 2)
 
 steps:
   # --- Step 1: Install dependencies for the add_product function ---
   - name: 'gcr.io/cloud-builders/npm'
     args: ['install']
-    dir: 'backend/functions/add_product' # The specific directory for this function
+    dir: 'backend/functions/add_product' # Path to the specific Cloud Function
 
-  # --- Step 2: Deploy the add_product function ---
+  # --- Step 2: Deploy the Cloud Function to Cloud Functions Gen 2 ---
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
       - 'functions'
       - 'deploy'
-      - 'add_product' # The name of the function to deploy
+      - 'add_product'
       - '--gen2'
       - '--runtime=nodejs22'
       - '--region=asia-south1'
-      - '--source=./backend/functions/add_product' # Source code directory
-      - '--entry-point=add_product' # Matches the exported function name in your code
+      - '--source=backend/functions/add_product' # ✅ No leading './'
+      - '--entry-point=add_product'
       - '--trigger-http'
       - '--allow-unauthenticated'
       - '--timeout=300s'
-      # --- ADD THE BUCKET NAME VARIABLE HERE ---
-      - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET,GCS_BUCKET_NAME=$_GCS_BUCKET_NAME'
+      - '--memory=512MB'
+      # ✅ Pass environment variables securely
+      - '--set-env-vars'
+      - |
+        MONGO_URI=${_MONGO_URI},
+        JWT_SECRET=${_JWT_SECRET},
+        GCS_BUCKET_NAME=${_GCS_BUCKET_NAME}
 
+# --- Optional: Log only to Cloud Logging (no stdout spam)
 options:
   logging: CLOUD_LOGGING_ONLY
