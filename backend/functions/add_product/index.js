@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { Storage } = require('@google-cloud/storage');
-const formidable = require('formidable'); // ✅ Correct import for v3+
+const { IncomingForm } = require('formidable'); // FIX 1: Correctly import IncomingForm
 const mongoose = require('mongoose');
 
 const connectDB = require('./common/db.js');
@@ -24,7 +24,7 @@ const bucket = storage.bucket(process.env.GCS_BUCKET_NAME);
 
 // --- Formidable Middleware ---
 const formidableMiddleware = (req, res, next) => {
-  const form = formidable({
+  const form = new IncomingForm({ // FIX 2: Instantiate with 'new'
     uploadDir: '/tmp',
     maxFileSize: 5 * 1024 * 1024, // 5MB
     multiples: false,
@@ -45,14 +45,16 @@ const formidableMiddleware = (req, res, next) => {
 // --- POST / Add Product ---
 app.post('/', [auth, formidableMiddleware], async (req, res) => {
   try {
+    // IMPORTANT: Move this line to your main server file to be called only ONCE at startup.
     await connectDB();
 
     if (req.user.role !== 'shopkeeper') {
       return res.status(403).json({ msg: 'Forbidden: Action requires shopkeeper role.' });
     }
 
-    const { name, description, price, stock } = req.body;
-    const imageFile = req.files.productImage;
+    // FIX 3: Simplify field extraction with destructuring
+    const { name: [name], description: [description], price: [price], stock: [stock] } = req.body;
+    const imageFile = req.files.productImage?.[0];
 
     if (!imageFile) {
       return res.status(400).json({ msg: 'Product image is required.' });
@@ -61,15 +63,16 @@ app.post('/', [auth, formidableMiddleware], async (req, res) => {
       return res.status(400).json({ msg: 'Name, price, and stock are required.' });
     }
 
-    const file = Array.isArray(imageFile) ? imageFile[0] : imageFile;
-    const gcsFileName = `${Date.now()}_${file.originalFilename}`;
-    await bucket.upload(file.filepath, { destination: gcsFileName });
+    const gcsFileName = `${Date.now()}_${imageFile.originalFilename}`;
+    await bucket.upload(imageFile.filepath, { destination: gcsFileName });
     const publicUrl = `https://storage.googleapis.com/${bucket.name}/${gcsFileName}`;
 
-    let shop = await Shop.findOne({ shopkeeperId: mongoose.Types.ObjectId(req.user.id) });
+    // FIX 4: Let Mongoose handle ObjectId casting automatically
+    let shop = await Shop.findOne({ shopkeeperId: req.user.id });
+    
     if (!shop) {
       shop = new Shop({
-        shopkeeperId: mongoose.Types.ObjectId(req.user.id),
+        shopkeeperId: req.user.id,
         name: 'My Shop',
         address: 'Default Address',
         location: { type: 'Point', coordinates: [0, 0] },
@@ -78,10 +81,10 @@ app.post('/', [auth, formidableMiddleware], async (req, res) => {
     }
 
     const newProduct = {
-      name: Array.isArray(name) ? name[0] : name,
-      description: Array.isArray(description) ? description[0] : description || '',
-      price: parseFloat(Array.isArray(price) ? price[0] : price),
-      stock: parseInt(Array.isArray(stock) ? stock[0] : stock, 10),
+      name,
+      description: description || '',
+      price: parseFloat(price),
+      stock: parseInt(stock, 10),
       imageUrl: publicUrl,
     };
 
