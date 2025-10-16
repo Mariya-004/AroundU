@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
-const connectDB = require('../customer_profile/common/db.js');
-const Shop = require('../add_product/common/models/Shop.js');
+const connectDB = require('.common/db.js');
+const Shop = require('.common/models/Shop.js');
 
 const app = express();
 
