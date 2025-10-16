@@ -32,3 +32,4 @@ steps:
 # --- Optional: Log only to Cloud Logging (no stdout spam)
 options:
   logging: CLOUD_LOGGING_ONLY
+##
