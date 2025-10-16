@@ -13,7 +13,7 @@ app.use(express.json());
 
 // --- START: GEOCODER SETUP ---
 const options = {
-  provider: 'openstreetmap', // ✅ FIX 1: Provider is now enabled
+  provider: 'openstreetmap',
   formatter: null
 };
 const geocoder = NodeGeocoder(options);
@@ -39,7 +39,7 @@ app.post('/', auth, async (req, res) => {
 
     // 1. Fetch the user first and check role immediately
     const user = await User.findById(userId);
-    
+
     if (!user) {
       return res.status(404).json({ msg: 'User not found.' });
     }
@@ -53,7 +53,7 @@ app.post('/', auth, async (req, res) => {
     if (fullName) fieldsToUpdate.name = fullName;
     if (phoneNumber) fieldsToUpdate.phoneNumber = phoneNumber;
     if (vehicleType) fieldsToUpdate.vehicleType = vehicleType;
-    
+
     // 3. Handle Location Update with Geocoding
     if (currentLocation) {
       let geoPoint;
@@ -83,17 +83,16 @@ app.post('/', auth, async (req, res) => {
         return res.status(400).json({ msg: 'Invalid currentLocation format. Must be an address string or an array: [longitude, latitude]' });
       }
 
-      // ✅ FIX 2: Use the correct schema field name 'location'
       fieldsToUpdate.location = geoPoint;
     }
-    
+
     // 4. Perform the update
     const updatedAgent = await User.findByIdAndUpdate(
       userId,
       { $set: fieldsToUpdate },
       { new: true, runValidators: true }
     ).select('-password');
-    
+
     res.status(200).json({
       msg: 'Delivery agent profile updated successfully',
       agent: updatedAgent
@@ -110,5 +109,39 @@ app.post('/', auth, async (req, res) => {
     res.status(500).send('Server error');
   }
 });
+
+
+/**
+ * @route   GET /
+ * @desc    Get the profile of the logged-in delivery agent
+ * @access  Private (Requires delivery agent role)
+ */
+app.get('/', auth, async (req, res) => {
+    await connectDB();
+    try {
+        const userId = req.user.id;
+
+        // Find the delivery agent's profile from the User collection
+        const agent = await User.findById(userId).select('-password');
+
+        // Check if the user exists
+        if (!agent) {
+            return res.status(404).json({ msg: 'Delivery agent not found.' });
+        }
+
+        // Verify the user's role
+        if (agent.role !== 'delivery_agent') {
+            return res.status(403).json({ msg: 'Forbidden: User is not a delivery agent.' });
+        }
+
+        // Return the agent's profile details
+        res.status(200).json(agent);
+
+    } catch (err) {
+        console.error("Error fetching delivery agent profile:", err);
+        res.status(500).send('Server error');
+    }
+});
+
 
 exports.deliveryagent_profile = app;
