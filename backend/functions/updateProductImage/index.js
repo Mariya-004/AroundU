@@ -17,7 +17,7 @@ connectDB();
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://aroundu-frontend-164909903360.asia-south1.run.app';
 app.use(cors({ origin: FRONTEND_URL }));
 
-const bucketName = process.env.GCS_BUCKET_NAME || 'aroundu-products';
+const bucketName = 'aroundu-products';
 const storage = new Storage();
 const bucket = storage.bucket(bucketName);
 
