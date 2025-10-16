@@ -21,7 +21,7 @@ app.use(cors({
 
 // --- GCS Configuration (Restored) ---
 const storage = new Storage();
-const bucket = storage.bucket(process.env.GCS_BUCKET_NAME);
+const bucket = storage.bucket('aroundu-products');
 
 // --- Formidable Middleware (Restored) ---
 const formidableMiddleware = (req, res, next) => {
