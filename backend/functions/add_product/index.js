@@ -54,7 +54,8 @@ app.post('/', auth, async (req, res) => {
     }
 
     // 4. Find or auto-create shop
-    let shop = await Shop.findOne({ shopkeeperId: mongoose.Types.ObjectId(req.user.id) });
+    // Correct and much cleaner
+    let shop = await Shop.findOne({ shopkeeperId: req.user.id });
     if (!shop) {
       shop = new Shop({
         shopkeeperId: mongoose.Types.ObjectId(req.user.id),
