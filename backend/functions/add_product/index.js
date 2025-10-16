@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
-const { Storage } = require('@google-cloud/storage');
-const { IncomingForm } = require('formidable'); // FIX 1: Correctly import IncomingForm
+// const { Storage } = require('@google-cloud/storage'); // Removed
+// const formidable  = require('formidable'); // Removed
 const mongoose = require('mongoose');
 
 const connectDB = require('./common/db.js');
@@ -12,93 +12,81 @@ const app = express();
 
 // --- CORS Configuration ---
 const FRONTEND_URL = 'https://aroundu-frontend-164909903360.asia-south1.run.app';
+
 app.use(cors({
   origin: FRONTEND_URL,
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// --- GCS Configuration ---
-const storage = new Storage();
-const bucket = storage.bucket(aroundu_products);
+// Add express.json() middleware to parse JSON request bodies
+app.use(express.json());
 
-// --- Formidable Middleware ---
-const formidableMiddleware = (req, res, next) => {
-  const form = new IncomingForm({ // FIX 2: Instantiate with 'new'
-    uploadDir: '/tmp',
-    maxFileSize: 5 * 1024 * 1024, // 5MB
-    multiples: false,
-    keepExtensions: true,
-  });
+// Handle OPTIONS preflight requests (can often be removed if cors is configured well)
+app.options('*', (req, res) => {
+  res.set('Access-Control-Allow-Origin', FRONTEND_URL);
+  res.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.status(204).send('');
+});
 
-  form.parse(req, (err, fields, files) => {
-    if (err) {
-      console.error('Formidable error:', err);
-      return res.status(400).json({ msg: 'Invalid form submission', error: err.message });
-    }
-    req.body = fields;
-    req.files = files;
-    next();
-  });
-};
+// --- GCS Configuration (Removed) ---
+// --- Formidable Middleware (Removed) ---
 
 // --- POST / Add Product ---
-app.post('/', [auth, formidableMiddleware], async (req, res) => {
+// The formidableMiddleware has been removed from the middleware chain.
+app.post('/', auth, async (req, res) => {
   try {
-    // IMPORTANT: Move this line to your main server file to be called only ONCE at startup.
     await connectDB();
 
+    // 1. Validate user role
     if (req.user.role !== 'shopkeeper') {
       return res.status(403).json({ msg: 'Forbidden: Action requires shopkeeper role.' });
     }
 
-    // FIX 3: Simplify field extraction with destructuring
-    const { name: [name], description: [description], price: [price], stock: [stock] } = req.body;
-    const imageFile = req.files.productImage?.[0];
+    // 2. Extract fields from the JSON body
+    // req.body is now a JSON object, not form fields from formidable.
+    const { name, description, price, stock } = req.body;
 
-    if (!imageFile) {
-      return res.status(400).json({ msg: 'Product image is required.' });
-    }
+    // 3. Validate required fields
     if (!name || !price || !stock) {
       return res.status(400).json({ msg: 'Name, price, and stock are required.' });
     }
 
-    const gcsFileName = `${Date.now()}_${imageFile.originalFilename}`;
-    await bucket.upload(imageFile.filepath, { destination: gcsFileName });
-    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${gcsFileName}`;
-
-    // FIX 4: Let Mongoose handle ObjectId casting automatically
+    // 4. Find or auto-create shop
+    // Correct and much cleaner
     let shop = await Shop.findOne({ shopkeeperId: req.user.id });
-    
     if (!shop) {
       shop = new Shop({
-        shopkeeperId: req.user.id,
+        shopkeeperId: mongoose.Types.ObjectId(req.user.id),
         name: 'My Shop',
         address: 'Default Address',
         location: { type: 'Point', coordinates: [0, 0] },
         products: [],
       });
+      await shop.save();
     }
 
+    // 5. Create new product object (without imageUrl)
     const newProduct = {
-      name,
-      description: description || '',
+      name: name,
+      description: description || '', // Set a default value if description is not provided
       price: parseFloat(price),
       stock: parseInt(stock, 10),
-      imageUrl: publicUrl,
     };
 
+    // 6. Save the new product
     shop.products.push(newProduct);
     await shop.save();
 
-    res.status(201).json({
+    return res.status(201).json({
       msg: 'Product added successfully!',
-      newProduct: shop.products.at(-1),
+      newProduct: shop.products[shop.products.length - 1],
     });
 
   } catch (err) {
     console.error('Error in add_product endpoint:', err);
-    res.status(500).json({ msg: 'Server Error', error: err.message });
+    return res.status(500).json({ msg: 'Server Error', error: err.message });
   }
 });
 
