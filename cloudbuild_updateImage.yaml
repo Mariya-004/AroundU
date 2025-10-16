@@ -1,5 +1,5 @@
 # In your cloudbuild.yaml 'steps' section
-
+steps:
   # --- Deploy the 'updateProductImage' function ---
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
@@ -15,3 +15,5 @@
       - '--trigger-http'
       - '--allow-unauthenticated'
       - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET,GCS_BUCKET_NAME=$_GCS_BUCKET_NAME'
+options:
+  logging: CLOUD_LOGGING_ONLY
