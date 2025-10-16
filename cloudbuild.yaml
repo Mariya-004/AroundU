@@ -32,8 +32,8 @@ steps:
       - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET'
 
   # --- Deploy the 'shop-profile' function ---
-- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  args:
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
     - 'functions'
     - 'deploy'
     - 'shop-profile'
