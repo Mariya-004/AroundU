@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const NodeGeocoder = require('node-geocoder'); // <-- ADD THIS LINE
+const NodeGeocoder = require('node-geocoder');
 const connectDB = require('./common/db.js');
 const Shop = require('./common/models/Shop.js');
 const User = require('./common/models/User.js');
@@ -8,76 +8,108 @@ const auth = require('./common/authMiddleware.js');
 
 const app = express();
 
-// Apply middleware
+// --- Middleware ---
 app.use(cors({ origin: true }));
 app.use(express.json());
 
-// --- START: GEOCODER SETUP ---
-const options = {
+// --- Geocoder Setup ---
+const geocoder = NodeGeocoder({
   provider: 'openstreetmap',
-  // Optional: add your own API key if you have one
-  // apiKey: 'YOUR_API_KEY',
-  formatter: null // 'gpx', 'string', ...
-};
-const geocoder = NodeGeocoder(options);
-// --- END: GEOCODER SETUP ---
+  formatter: null,
+});
 
-
-app.post('/', auth, async (req, res) => {
+/**
+ * @route   GET /
+ * @desc    Fetch the logged-in shopkeeper's shop profile
+ * @access  Private (Requires authentication)
+ */
+app.get('/', auth, async (req, res) => {
   await connectDB();
-  const {
-    shopName,
-    shopAddress,
-    shopLocation, // This will now be a place name like "Lulu Mall, Kochi"
-    shopPhoneNumber,
-    shopCategory,
-    shopDescription,
-  } = req.body;
 
   try {
     const userId = req.user.id;
     const user = await User.findById(userId);
+
     if (!user || user.role !== 'shopkeeper') {
-      return res.status(403).json({ msg: 'Forbidden: User is not a shopkeeper.' });
+      return res.status(403).json({ msg: 'Forbidden: Only shopkeepers can access this.' });
     }
 
-    // --- START: NEW GEOCODING LOGIC ---
+    const shop = await Shop.findOne({ shopkeeperId: userId });
+
+    if (!shop) {
+      return res.status(200).json({
+        msg: 'No shop profile found for this user.',
+        shopExists: false,
+        shop: null,
+      });
+    }
+
+    res.status(200).json({
+      msg: 'Shop profile fetched successfully.',
+      shopExists: true,
+      shop,
+    });
+  } catch (err) {
+    console.error('Error fetching shop profile:', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+});
+
+/**
+ * @route   POST /
+ * @desc    Create or update shop profile for shopkeeper
+ * @access  Private (Requires authentication)
+ */
+app.post('/', auth, async (req, res) => {
+  await connectDB();
+
+  try {
+    const {
+      shopName,
+      shopAddress,
+      shopLocation, // place name or address
+      shopPhoneNumber,
+      shopCategory,
+      shopDescription,
+    } = req.body;
+
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+
+    if (!user || user.role !== 'shopkeeper') {
+      return res.status(403).json({ msg: 'Forbidden: Only shopkeepers can create or update a shop.' });
+    }
+
+    // Geocode the provided shopLocation
     if (!shopLocation || typeof shopLocation !== 'string') {
-        return res.status(400).json({ msg: 'shopLocation (the place name) is required.' });
+      return res.status(400).json({ msg: 'shopLocation (place name or address) is required.' });
     }
 
-    // Use the geocoder to find the coordinates for the given place name
-    const geocodedData = await geocoder.geocode(shopLocation);
-
-    // Handle cases where the location could not be found
-    if (!geocodedData || geocodedData.length === 0) {
-        return res.status(400).json({
-            msg: `Could not find coordinates for the location: "${shopLocation}". Please try a more specific address or place name.`
-        });
+    const geoResult = await geocoder.geocode(shopLocation);
+    if (!geoResult || geoResult.length === 0) {
+      return res.status(400).json({
+        msg: `Could not find coordinates for "${shopLocation}". Try a more specific address.`,
+      });
     }
 
-    // Extract latitude and longitude from the first result
-    const { latitude, longitude } = geocodedData[0];
-
-    // Construct the correct GeoJSON object for the database
-    // IMPORTANT: MongoDB requires the format [longitude, latitude]
+    const { latitude, longitude } = geoResult[0];
     const locationForDb = {
       type: 'Point',
-      coordinates: [longitude, latitude]
+      coordinates: [longitude, latitude], // MongoDB expects [lng, lat]
     };
-    // --- END: NEW GEOCODING LOGIC ---
 
-
+    // Check if shop already exists
     let shop = await Shop.findOne({ shopkeeperId: userId });
 
     if (shop) {
+      // Update existing shop
       shop = await Shop.findOneAndUpdate(
         { shopkeeperId: userId },
         {
           $set: {
             name: shopName,
             address: shopAddress,
-            location: locationForDb, // Use the geocoded object
+            location: locationForDb,
             phoneNumber: shopPhoneNumber,
             category: shopCategory,
             description: shopDescription,
@@ -88,11 +120,12 @@ app.post('/', auth, async (req, res) => {
       return res.status(200).json({ msg: 'Shop profile updated successfully', shop });
     }
 
+    // Create a new shop
     shop = new Shop({
       shopkeeperId: userId,
       name: shopName,
       address: shopAddress,
-      location: locationForDb, // Use the geocoded object
+      location: locationForDb,
       phoneNumber: shopPhoneNumber,
       category: shopCategory,
       description: shopDescription,
@@ -101,8 +134,8 @@ app.post('/', auth, async (req, res) => {
     await shop.save();
     res.status(201).json({ msg: 'Shop profile created successfully', shop });
   } catch (err) {
-    console.error("Error details:", err);
-    res.status(500).send('Server error');
+    console.error('Error in shop profile POST:', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
   }
 });
 
