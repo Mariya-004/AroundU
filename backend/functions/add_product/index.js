@@ -20,7 +20,7 @@ app.use(cors({
 
 // --- GCS Configuration ---
 const storage = new Storage();
-const bucket = storage.bucket(process.env.GCS_BUCKET_NAME);
+const bucket = storage.bucket(aroundu_products);
 
 // --- Formidable Middleware ---
 const formidableMiddleware = (req, res, next) => {
