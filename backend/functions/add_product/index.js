@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
-const { Storage } = require('@google-cloud/storage'); // Restored
-const formidable  = require('formidable'); // Restored
+const { Storage } = require('@google-cloud/storage');
+const { IncomingForm } = require('formidable'); // ✅ FIX 1: Import IncomingForm directly
 const mongoose = require('mongoose');
 
 const connectDB = require('./common/db.js');
@@ -19,15 +19,14 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// Note: express.json() is not needed for this multipart route, but can be kept for other routes.
-
-// --- GCS Configuration (Restored) ---
+// --- GCS Configuration ---
 const storage = new Storage();
 const bucket = storage.bucket(process.env.GCS_BUCKET_NAME);
 
-// --- Formidable Middleware (Restored) ---
+// --- Formidable Middleware ---
 const formidableMiddleware = (req, res, next) => {
-  const form = formidable({
+  // ✅ FIX 2: Create a new instance of IncomingForm
+  const form = new IncomingForm({
     uploadDir: '/tmp', // Use /tmp for serverless environments
     maxFileSize: 5 * 1024 * 1024, // 5MB
     multiples: false,
@@ -56,9 +55,8 @@ app.post('/', [auth, formidableMiddleware], async (req, res) => {
     }
 
     // 2. Extract fields and file from the parsed form
-    // Formidable returns all fields as arrays.
     const { name: [name], description: [description], price: [price], stock: [stock] } = req.body;
-    const imageFile = req.files.productImage?.[0]; // Get the first file from the productImage field
+    const imageFile = req.files.productImage?.[0];
 
     // 3. Validate input
     if (!imageFile) {
@@ -93,7 +91,7 @@ app.post('/', [auth, formidableMiddleware], async (req, res) => {
       description: description || '',
       price: parseFloat(price),
       stock: parseInt(stock, 10),
-      imageUrl: publicUrl, // Add the GCS public URL
+      imageUrl: publicUrl,
     };
 
     // 7. Save the new product
