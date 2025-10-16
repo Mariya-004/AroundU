@@ -34,6 +34,7 @@ steps:
   # --- Deploy the 'shop-profile' function ---
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     args:
+    - 'gcloud'
     - 'functions'
     - 'deploy'
     - 'shop-profile'
