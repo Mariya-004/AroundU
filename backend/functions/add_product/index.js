@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
-const { Storage } = require('@google-cloud/storage');
-const formidable  = require('formidable');
+// const { Storage } = require('@google-cloud/storage'); // Removed
+// const formidable  = require('formidable'); // Removed
 const mongoose = require('mongoose');
 
 const connectDB = require('./common/db.js');
@@ -19,7 +19,10 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// Handle OPTIONS preflight requests
+// Add express.json() middleware to parse JSON request bodies
+app.use(express.json());
+
+// Handle OPTIONS preflight requests (can often be removed if `cors` is configured well)
 app.options('*', (req, res) => {
   res.set('Access-Control-Allow-Origin', FRONTEND_URL);
   res.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
@@ -27,50 +30,12 @@ app.options('*', (req, res) => {
   res.status(204).send('');
 });
 
-// --- GCS Configuration ---
-const storage = new Storage();
-const bucket = storage.bucket(process.env.GCS_BUCKET_NAME);
-
-// --- Formidable Middleware ---
-const formidableMiddleware = (req, res, next) => {
-  const form = formidable({
-    uploadDir: '/tmp', // ✅ Cloud Functions can only write to /tmp
-    maxFileSize: 5 * 1024 * 1024, // 5 MB limit
-    multiples: false,
-    keepExtensions: true,
-  });
-
-  let responded = false;
-
-  // Timeout if form never finishes (increase to 60s for safety)
-  const timeout = setTimeout(() => {
-    if (!responded) {
-      responded = true;
-      console.error('Formidable timeout – sending 408');
-      res.status(408).json({ msg: 'Request timeout while uploading file.' });
-      form.emit('error', new Error('Form timeout'));
-    }
-  }, 60000); // 60s timeout to allow slow cold starts or uploads
-
-  form.parse(req, (err, fields, files) => {
-    if (responded) return;
-    clearTimeout(timeout);
-
-    if (err) {
-      responded = true;
-      console.error('Formidable error:', err);
-      return res.status(400).json({ msg: 'Invalid form submission', error: err.message });
-    }
-
-    req.body = fields;
-    req.files = files;
-    responded = true;
-    next();
-  });
-};
+// --- GCS Configuration (Removed) ---
+// --- Formidable Middleware (Removed) ---
 
 // --- POST / Add Product ---
-app.post('/', [auth, formidableMiddleware], async (req, res) => {
+// The formidableMiddleware has been removed from the middleware chain.
+app.post('/', auth, async (req, res) => {
   try {
     await connectDB();
 
@@ -79,27 +44,14 @@ app.post('/', [auth, formidableMiddleware], async (req, res) => {
       return res.status(403).json({ msg: 'Forbidden: Action requires shopkeeper role.' });
     }
 
-    // 2. Extract fields and file
+    // 2. Extract fields from the JSON body
+    // req.body is now a JSON object, not form fields from formidable.
     const { name, description, price, stock } = req.body;
-    let imageFile = req.files?.productImage;
 
-    if (!imageFile) {
-      return res.status(400).json({ msg: 'Product image is required.' });
-    }
-
-    // Handle single file (Formidable may wrap in array)
-    imageFile = Array.isArray(imageFile) ? imageFile[0] : imageFile;
-
+    // 3. Validate required fields
     if (!name || !price || !stock) {
       return res.status(400).json({ msg: 'Name, price, and stock are required.' });
     }
-
-    // 3. Upload to GCS
-    const gcsFileName = `${Date.now()}_${imageFile.originalFilename}`;
-    await bucket.upload(imageFile.filepath, {
-      destination: gcsFileName,
-    });
-    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${gcsFileName}`;
 
     // 4. Find or auto-create shop
     let shop = await Shop.findOne({ shopkeeperId: mongoose.Types.ObjectId(req.user.id) });
@@ -114,16 +66,15 @@ app.post('/', [auth, formidableMiddleware], async (req, res) => {
       await shop.save();
     }
 
-    // 5. Save new product
-    const getField = f => Array.isArray(f) ? f[0] : f;
+    // 5. Create new product object (without imageUrl)
     const newProduct = {
-      name: getField(name),
-      description: description ? getField(description) : '',
-      price: parseFloat(getField(price)),
-      stock: parseInt(getField(stock), 10),
-      imageUrl: publicUrl,
+      name: name,
+      description: description || '', // Set a default value if description is not provided
+      price: parseFloat(price),
+      stock: parseInt(stock, 10),
     };
 
+    // 6. Save the new product
     shop.products.push(newProduct);
     await shop.save();
 
