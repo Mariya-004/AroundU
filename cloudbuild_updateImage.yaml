@@ -14,6 +14,8 @@ steps:
       - '--entry-point=updateProductImage' # The name of the export
       - '--trigger-http'
       - '--allow-unauthenticated'
+      - '--timeout=300s'            # ✅ INCREASED TIMEOUT: Gives the function 5 minutes to complete
+      - '--memory=512MB'
       - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET,GCS_BUCKET_NAME=$_GCS_BUCKET_NAME'
 options:
   logging: CLOUD_LOGGING_ONLY
