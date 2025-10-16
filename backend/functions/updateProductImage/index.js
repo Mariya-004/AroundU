@@ -17,7 +17,7 @@ connectDB();
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://aroundu-frontend-164909903360.asia-south1.run.app';
 app.use(cors({ origin: FRONTEND_URL }));
 
-const bucketName = 'aroundu-products';
+const bucketName = process.env.GCS_BUCKET_NAME || 'aroundu-products';
 const storage = new Storage();
 const bucket = storage.bucket(bucketName);
 
@@ -40,11 +40,13 @@ const formidableMiddleware = (req, res, next) => {
 
 app.patch('/shops/:shopId/products/:productId/image', [auth, formidableMiddleware], async (req, res) => {
     try {
+        console.log('[1] Handler triggered. Finding shop...');
         const shop = await Shop.findById(req.params.shopId);
 
         if (!shop) {
             return res.status(404).json({ msg: 'Shop not found.' });
         }
+        console.log('[2] Shop found. Verifying owner and finding product...');
 
         if (shop.shopkeeperId.toString() !== req.user.id) {
             return res.status(403).json({ msg: 'Authorization denied. You do not own this shop.' });
@@ -59,15 +61,20 @@ app.patch('/shops/:shopId/products/:productId/image', [auth, formidableMiddlewar
         if (!product) {
             return res.status(404).json({ msg: 'Product not found within this shop.' });
         }
+        console.log('[3] Product found. Starting Google Cloud Storage upload...');
 
         const gcsFileName = `products/${product._id}_${Date.now()}_${imageFile.originalFilename}`;
         await bucket.upload(imageFile.filepath, {
             destination: gcsFileName,
         });
+        console.log('[4] GCS upload complete. Constructing public URL...');
+
         const publicUrl = `https://storage.googleapis.com/${bucket.name}/${gcsFileName}`;
 
         product.imageUrl = publicUrl;
+        console.log('[5] Saving updated product info to the database...');
         await shop.save();
+        console.log('[6] Database save complete. Sending success response.');
 
         res.status(200).json({
             msg: 'Product image updated successfully!',
@@ -81,4 +88,5 @@ app.patch('/shops/:shopId/products/:productId/image', [auth, formidableMiddlewar
 });
 
 exports.updateProductImage = app;
+
 
