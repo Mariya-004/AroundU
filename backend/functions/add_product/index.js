@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { Storage } = require('@google-cloud/storage');
-const { IncomingForm } = require('formidable'); // ✅ FIX 1: Import IncomingForm directly
+const { IncomingForm } = require('formidable');
 const mongoose = require('mongoose');
 
 const connectDB = require('./common/db.js');
@@ -19,27 +19,40 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
+// Handle preflight requests
+app.options('*', (req, res) => {
+  res.set('Access-Control-Allow-Origin', FRONTEND_URL);
+  res.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.status(204).send('');
+});
+
 // --- GCS Configuration ---
 const storage = new Storage();
-const bucket = storage.bucket(process.env.GCS_BUCKET_NAME);
+const bucket = storage.bucket('aroundu-products');
 
 // --- Formidable Middleware ---
 const formidableMiddleware = (req, res, next) => {
-  // ✅ FIX 2: Create a new instance of IncomingForm
   const form = new IncomingForm({
-    uploadDir: '/tmp', // Use /tmp for serverless environments
-    maxFileSize: 5 * 1024 * 1024, // 5MB
-    multiples: false,
+    uploadDir: '/tmp',           // serverless temp directory
     keepExtensions: true,
+    multiples: false,
+    maxFileSize: 10 * 1024 * 1024, // 10MB
+    fileWriteStreamHandler: null,
   });
+
+  // Extend timeout (optional)
+  form.timeout = 30000; // 30 seconds
 
   form.parse(req, (err, fields, files) => {
     if (err) {
       console.error('Formidable error:', err);
       return res.status(400).json({ msg: 'Invalid form submission', error: err.message });
     }
-    req.body = fields; // Attach text fields to req.body
-    req.files = files; // Attach files to req.files
+
+    // Attach parsed data
+    req.body = fields;
+    req.files = files;
     next();
   });
 };
@@ -49,31 +62,32 @@ app.post('/', [auth, formidableMiddleware], async (req, res) => {
   try {
     await connectDB();
 
-    // 1. Validate user role
-    if (req.user.role !== 'shopkeeper') {
+    if (!req.user || req.user.role !== 'shopkeeper') {
       return res.status(403).json({ msg: 'Forbidden: Action requires shopkeeper role.' });
     }
 
-    // 2. Extract fields and file from the parsed form
-    const { name: [name], description: [description], price: [price], stock: [stock] } = req.body;
-    const imageFile = req.files.productImage?.[0];
+    // Extract data safely
+    const name = req.body.name;
+    const description = req.body.description || '';
+    const price = parseFloat(req.body.price);
+    const stock = parseInt(req.body.stock, 10);
+    const imageFile = req.files?.productImage;
 
-    // 3. Validate input
     if (!imageFile) {
       return res.status(400).json({ msg: 'Product image is required.' });
     }
-    if (!name || !price || !stock) {
-      return res.status(400).json({ msg: 'Name, price, and stock are required.' });
+    if (!name || isNaN(price) || isNaN(stock)) {
+      return res.status(400).json({ msg: 'Name, price, and stock are required and must be valid.' });
     }
 
-    // 4. Upload image to GCS
+    console.log('Uploading image:', imageFile.originalFilename);
+
+    // Upload image to GCS
     const gcsFileName = `${Date.now()}_${imageFile.originalFilename}`;
-    await bucket.upload(imageFile.filepath, {
-      destination: gcsFileName,
-    });
+    await bucket.upload(imageFile.filepath, { destination: gcsFileName });
     const publicUrl = `https://storage.googleapis.com/${bucket.name}/${gcsFileName}`;
 
-    // 5. Find or auto-create shop
+    // Find or create shop
     let shop = await Shop.findOne({ shopkeeperId: req.user.id });
     if (!shop) {
       shop = new Shop({
@@ -85,18 +99,18 @@ app.post('/', [auth, formidableMiddleware], async (req, res) => {
       });
     }
 
-    // 6. Create new product object with the image URL
     const newProduct = {
-      name: name,
-      description: description || '',
-      price: parseFloat(price),
-      stock: parseInt(stock, 10),
+      name,
+      description,
+      price,
+      stock,
       imageUrl: publicUrl,
     };
 
-    // 7. Save the new product
     shop.products.push(newProduct);
     await shop.save();
+
+    console.log('✅ Product added:', newProduct.name);
 
     return res.status(201).json({
       msg: 'Product added successfully!',
