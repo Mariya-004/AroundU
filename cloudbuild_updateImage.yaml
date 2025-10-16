@@ -1,0 +1,17 @@
+# In your cloudbuild.yaml 'steps' section
+
+  # --- Deploy the 'updateProductImage' function ---
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'functions'
+      - 'deploy'
+      - 'updateProductImage' # The name of the exported function in index.js
+      - '--gen2'
+      - '--runtime=nodejs22'
+      - '--region=asia-south1'
+      - '--source=backend/functions/updateProductImage' # The directory containing the code
+      - '--entry-point=updateProductImage' # The name of the export
+      - '--trigger-http'
+      - '--allow-unauthenticated'
+      - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET,GCS_BUCKET_NAME=$_GCS_BUCKET_NAME'
