@@ -80,7 +80,7 @@ app.post('/', auth, async (req, res) => {
       return res.status(403).json({ msg: 'Forbidden: Only shopkeepers can create or update a shop.' });
     }
 
-    // Geocode the provided shopLocation
+    // --- Validate and geocode shopLocation ---
     if (!shopLocation || typeof shopLocation !== 'string') {
       return res.status(400).json({ msg: 'shopLocation (place name or address) is required.' });
     }
@@ -98,17 +98,17 @@ app.post('/', auth, async (req, res) => {
       coordinates: [longitude, latitude], // MongoDB expects [lng, lat]
     };
 
-    // Check if shop already exists
+    // --- Check if shop already exists ---
     let shop = await Shop.findOne({ shopkeeperId: userId });
 
     if (shop) {
-      // Update existing shop
       shop = await Shop.findOneAndUpdate(
         { shopkeeperId: userId },
         {
           $set: {
             name: shopName,
             address: shopAddress,
+            locationName: shopLocation, // ✅ save readable location name
             location: locationForDb,
             phoneNumber: shopPhoneNumber,
             category: shopCategory,
@@ -120,11 +120,12 @@ app.post('/', auth, async (req, res) => {
       return res.status(200).json({ msg: 'Shop profile updated successfully', shop });
     }
 
-    // Create a new shop
+    // --- Create a new shop ---
     shop = new Shop({
       shopkeeperId: userId,
       name: shopName,
       address: shopAddress,
+      locationName: shopLocation, // ✅ added field
       location: locationForDb,
       phoneNumber: shopPhoneNumber,
       category: shopCategory,
@@ -133,6 +134,7 @@ app.post('/', auth, async (req, res) => {
 
     await shop.save();
     res.status(201).json({ msg: 'Shop profile created successfully', shop });
+
   } catch (err) {
     console.error('Error in shop profile POST:', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
