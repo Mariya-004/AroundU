@@ -15,7 +15,7 @@ export default function CustomerDashboard() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState(null);
 
-  // Function to call the search API
+  // CORRECTED: Function to call the search API using GET method
   const handleSearch = async (query) => {
     if (query.trim() === "") {
       setSearchResults([]);
@@ -25,19 +25,13 @@ export default function CustomerDashboard() {
     setIsSearching(true);
     setSearchError(null);
 
-    // Prepare the body for the POST request
-    const requestBody = JSON.stringify({
-      searchQuery: query,
-    });
-
     try {
-      const response = await fetch(SEARCH_API_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Note: If authentication (like an Authorization header) is required, it must be added here.
-        },
-        body: requestBody,
+      // CORRECTED: Construct URL with query parameter for a GET request
+      const url = `${SEARCH_API_ENDPOINT}?query=${encodeURIComponent(query)}`;
+
+      // CORRECTED: Use GET method and remove body/headers for Content-Type
+      const response = await fetch(url, {
+        method: 'GET',
       });
 
       if (!response.ok) {
@@ -46,8 +40,8 @@ export default function CustomerDashboard() {
 
       const data = await response.json();
       
-      // Assuming the API returns an array of items/shops
-      setSearchResults(data); 
+      // CORRECTED: The results are inside the 'results' property of the response
+      setSearchResults(data.results || []); 
 
     } catch (error) {
       console.error("Search API Error:", error);
@@ -58,16 +52,14 @@ export default function CustomerDashboard() {
     }
   };
 
-  // Debounce the search input to limit API calls (optional but highly recommended)
+  // Debounce the search input to limit API calls
   useEffect(() => {
-    // Set a timeout for 500ms after the user stops typing
     const delayDebounceFn = setTimeout(() => {
       handleSearch(searchQuery);
     }, 500);
 
-    // Cleanup function to cancel the previous timeout
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]); // Re-run effect when searchQuery changes
+  }, [searchQuery]);
 
 
   return (
@@ -83,58 +75,30 @@ export default function CustomerDashboard() {
       {/* Greeting */}
       <h2 style={{ fontSize: "1.8rem", marginBottom: "20px" }}>Hi {userName} 👋</h2>
 
-      {/* Profile Setup Button (kept for reference, consider moving to a header) */}
+      {/* Profile and Map Buttons */}
       <button
-        style={{
-          marginBottom: "20px",
-          padding: "10px 20px",
-          background: "#C8A46B",
-          color: "#144139",
-          border: "none",
-          borderRadius: "8px",
-          cursor: "pointer",
-          fontWeight: "bold",
-          marginRight: "10px", // Added for spacing next to Map button
-        }}
+        style={{ marginBottom: "20px", padding: "10px 20px", background: "#C8A46B", color: "#144139", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold", marginRight: "10px" }}
         onClick={() => navigate("/customer-profile")}
       >
         Profile Setup
       </button>
-      
-      {/* Map Button (kept for reference, consider moving to a header) */}
       <button
-        style={{
-          marginBottom: "20px",
-          padding: "10px 20px",
-          background: "#144139",
-          color: "#fff",
-          border: "none",
-          borderRadius: "8px",
-          cursor: "pointer",
-          fontWeight: "bold",
-        }}
+        style={{ marginBottom: "20px", padding: "10px 20px", background: "#144139", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "bold" }}
         onClick={() => navigate("/customer-map")}
       >
         View Map
       </button>
 
-      {/* Search Bar - MODIFIED to use state and handle API call */}
+      {/* Search Bar */}
       <input
         type="text"
-        placeholder="Search for shops, items..."
+        placeholder="Search for items..."
         value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)} // Update state on change
-        style={{
-          width: "100%",
-          padding: "12px 16px",
-          fontSize: "1rem",
-          borderRadius: "10px",
-          border: "1px solid #ccc",
-          marginBottom: "15px", // Reduced margin to place results closer
-        }}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        style={{ width: "100%", padding: "12px 16px", fontSize: "1rem", borderRadius: "10px", border: "1px solid #ccc", marginBottom: "15px" }}
       />
 
-      {/* Search Results Display Area - NEW */}
+      {/* CORRECTED: Search Results Display Area */}
       {searchQuery.length > 0 && (
         <div style={{ marginBottom: "30px", padding: "10px", border: "1px solid #eee", borderRadius: "8px", background: "#f9f9f9" }}>
           <h3 style={{ fontSize: "1.1rem", marginBottom: "10px", color: "#007bff" }}>Search Results for "{searchQuery}"</h3>
@@ -144,25 +108,23 @@ export default function CustomerDashboard() {
           {searchError && <p style={{ color: "red", fontWeight: "bold" }}>{searchError}</p>}
           
           {!isSearching && !searchError && searchResults.length === 0 && (
-            <p style={{ color: "#777" }}>No items or shops found.</p>
+            <p style={{ color: "#777" }}>No items found.</p>
           )}
 
           {!isSearching && searchResults.length > 0 && (
             <ul style={{ listStyle: "none", padding: 0 }}>
-              {searchResults.map((item, index) => (
-                // Assuming each search result object has a 'name' and 'type' property
-                <li key={index} style={{ padding: "8px 0", borderBottom: "1px dotted #ddd", cursor: "pointer" }}>
-                  <strong>{item.name || "Unnamed Result"}</strong> - {item.type || "Item"}
+              {searchResults.map((result, index) => (
+                // CORRECTED: Displaying product and shop name from the API response
+                <li key={index} style={{ padding: "8px 0", borderBottom: "1px dotted #ddd" }}>
+                  <strong>{result.product.name}</strong> - <span style={{color: "#555"}}>from {result.shopName}</span>
                 </li>
               ))}
             </ul>
           )}
         </div>
       )}
-      {/* End Search Results Display Area */}
-
-
-      {/* The rest of the original dashboard content follows... */}
+      
+      {/* --- Rest of the dashboard content restored below --- */}
 
       {/* Explore Nearby Section */}
       <div
@@ -189,7 +151,7 @@ export default function CustomerDashboard() {
             cursor: "pointer",
             fontWeight: "bold",
           }}
-          onClick={() => navigate("/customer-map")} // Added navigation
+          onClick={() => navigate("/customer-map")}
         >
           Explore Now
         </button>
@@ -256,3 +218,4 @@ export default function CustomerDashboard() {
     </div>
   );
 }
+
