@@ -5,7 +5,13 @@ const Shop = require('./common/models/Shop.js');
 
 const app = express();
 
-app.use(cors({ origin: true }));
+const FRONTEND_URL = 'https://aroundu-frontend-164909903360.asia-south1.run.app';
+
+app.use(cors({
+  origin: FRONTEND_URL,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 
 // Search products by name or category (case-insensitive)
