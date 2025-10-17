@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./common/db.js');
-const Shop = require('./common/models/Shop.js');
+const Shop = require('./common/models/Shop.js'); // Assuming your model file is here
 
 const app = express();
 
@@ -14,44 +14,42 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Search products by name or category (case-insensitive)
+// Search products by name (case-insensitive) using a more efficient MongoDB Aggregation Pipeline
 app.get('/', async (req, res) => {
   await connectDB();
 
-  const { query, category } = req.query;
+  // Only the 'query' parameter is used, as 'category' is not in the schema
+  const { query } = req.query;
 
   try {
-    // Build search conditions
-    let productMatch = {};
+    // The aggregation pipeline is a series of stages to process the data
+    const pipeline = [];
+
+    // Stage 1: Deconstruct the products array into a stream of documents
+    // This creates a separate document for each product in each shop
+    pipeline.push({ $unwind: '$products' });
+
+    // Stage 2 (Conditional): If a search query is provided, filter the products by name
     if (query) {
-      productMatch.name = { $regex: query, $options: 'i' };
-    }
-    if (category) {
-      productMatch.category = { $regex: category, $options: 'i' };
-    }
-
-    // Find shops with matching products
-    const shops = await Shop.find({
-      products: { $elemMatch: productMatch }
-    });
-
-    // Collect matching products with shop info
-    const results = [];
-    shops.forEach(shop => {
-      shop.products.forEach(product => {
-        let match = true;
-        if (query && !product.name.match(new RegExp(query, 'i'))) match = false;
-        if (category && (!product.category || !product.category.match(new RegExp(category, 'i')))) match = false;
-        if (match) {
-          results.push({
-            shopId: shop._id,
-            shopName: shop.name,
-            shopAddress: shop.address,
-            product
-          });
+      pipeline.push({
+        $match: {
+          'products.name': { $regex: query, $options: 'i' }
         }
       });
+    }
+
+    // Stage 3: Reshape the output to the desired format
+    pipeline.push({
+      $project: {
+        _id: 0, // Exclude the default _id from the top-level document
+        shopId: '$_id',
+        shopName: '$name',
+        shopAddress: '$address',
+        product: '$products'
+      }
     });
+
+    const results = await Shop.aggregate(pipeline);
 
     res.json({ results });
   } catch (err) {
