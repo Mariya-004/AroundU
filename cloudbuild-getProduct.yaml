@@ -1,0 +1,28 @@
+steps:
+  # Step 1: Install dependencies
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['install']
+    dir: 'backend/functions/get_product'
+
+  # Step 2: Deploy the function
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'gcloud'
+      - 'functions'
+      - 'deploy'
+      - 'get_product'
+      - '--gen2'
+      - '--runtime=nodejs22'
+      - '--region=asia-south1'
+      - '--source=./backend/functions/get_product'
+      - '--entry-point=get_product' # Corrected this to match your likely export
+      - '--trigger-http'
+      - '--allow-unauthenticated'
+      # Corrected way to set environment variables for clarity and safety
+      - '--set-env-vars'
+      - 'MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET'
+
+# This block must be at the root level (no indentation)
+options:
+  # This line must be indented with two spaces
+  logging: CLOUD_LOGGING_ONLY

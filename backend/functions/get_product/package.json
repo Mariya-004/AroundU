@@ -1,0 +1,23 @@
+{
+  "name": "get_product",
+  "version": "1.0.0",
+  "description": "Fetch detailed information for a specific product from the AroundU backend",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "mongoose": "^7.6.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "author": "AroundU Team",
+  "license": "MIT"
+}
