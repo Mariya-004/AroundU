@@ -2,8 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Storage } = require('@google-cloud/storage');
-const multer = require('multer'); // Import multer
+const Busboy = require('busboy');
 const path = require('path');
+const os = require('os');
+const fs = require('fs');
 
 const connectDB = require('./common/db.js');
 const Shop = require('./common/models/Shop.js');
@@ -19,12 +21,46 @@ const bucketName = process.env.GCS_BUCKET_NAME || 'aroundu-products';
 const storage = new Storage();
 const bucket = storage.bucket(bucketName);
 
-// Configure multer to save files to the temporary directory
-const upload = multer({ dest: '/tmp/' });
+// This is our new busboy-based middleware
+const fileUploadMiddleware = (req, res, next) => {
+    const busboy = Busboy({ headers: req.headers });
+    const tmpdir = os.tmpdir();
+    const fileWrites = [];
+    req.files = {};
 
-// The middleware array now uses multer's .single() method
-// 'productImage' must match the key name you use in Postman's form-data
-app.patch('/shops/:shopId/products/:productId/image', [auth, upload.single('productImage')], async (req, res) => {
+    busboy.on('file', (fieldname, file, { filename }) => {
+        console.log(`[BUSBOY] Processing file: ${filename}`);
+        const filepath = path.join(tmpdir, filename);
+        const writeStream = fs.createWriteStream(filepath);
+        file.pipe(writeStream);
+
+        const promise = new Promise((resolve, reject) => {
+            file.on('end', () => writeStream.end());
+            writeStream.on('finish', () => {
+                req.files[fieldname] = { filepath, filename };
+                resolve();
+            });
+            writeStream.on('error', reject);
+        });
+        fileWrites.push(promise);
+    });
+
+    busboy.on('finish', async () => {
+        try {
+            await Promise.all(fileWrites);
+            console.log('[BUSBOY] All files processed successfully.');
+            next();
+        } catch (err) {
+            console.error('[BUSBOY] Error processing file writes:', err);
+            next(err);
+        }
+    });
+    
+    // Pipe the request from Express into busboy
+    req.pipe(busboy);
+};
+
+app.patch('/shops/:shopId/products/:productId/image', [auth, fileUploadMiddleware], async (req, res) => {
     try {
         console.log('[1] Handler triggered. Finding shop...');
         const shop = await Shop.findById(req.params.shopId);
@@ -35,35 +71,33 @@ app.patch('/shops/:shopId/products/:productId/image', [auth, upload.single('prod
         console.log('[2] Shop found. Verifying owner...');
 
         if (shop.shopkeeperId.toString() !== req.user.id) {
-            return res.status(403).json({ msg: 'Authorization denied. You do not own this shop.' });
+            return res.status(403).json({ msg: 'Authorization denied.' });
         }
-        
-        // With multer.single(), the file is available at req.file
-        const imageFile = req.file;
+
+        const imageFile = req.files.productImage;
         if (!imageFile) {
             return res.status(400).json({ msg: 'Product image file is required.' });
         }
-
+        
         const product = shop.products.id(req.params.productId);
         if (!product) {
-            return res.status(404).json({ msg: 'Product not found within this shop.' });
+            return res.status(404).json({ msg: 'Product not found.' });
         }
-        console.log('[3] Product found. Starting Google Cloud Storage upload...');
+        console.log('[3] Product found. Starting GCS upload...');
         
-        // Use the properties provided by multer: path and originalname
-        const gcsFileName = `products/${product._id}_${Date.now()}${path.extname(imageFile.originalname)}`;
+        const gcsFileName = `products/${product._id}_${Date.now()}${path.extname(imageFile.filename)}`;
         
-        await bucket.upload(imageFile.path, {
+        await bucket.upload(imageFile.filepath, {
             destination: gcsFileName,
         });
-        console.log('[4] GCS upload complete. Constructing public URL...');
+        console.log('[4] GCS upload complete.');
 
         const publicUrl = `https://storage.googleapis.com/${bucket.name}/${gcsFileName}`;
-
         product.imageUrl = publicUrl;
-        console.log('[5] Saving updated product info to the database...');
+
+        console.log('[5] Saving to database...');
         await shop.save();
-        console.log('[6] Database save complete. Sending success response.');
+        console.log('[6] Database save complete.');
 
         res.status(200).json({
             msg: 'Product image updated successfully!',
@@ -71,8 +105,7 @@ app.patch('/shops/:shopId/products/:productId/image', [auth, upload.single('prod
         });
 
     } catch (err) {
-        console.error('--- [FATAL] UNHANDLED ERROR in image update handler ---');
-        console.error(err);
+        console.error('[FATAL] Unhandled error:', err);
         res.status(500).json({ msg: 'Server Error', error: err.message });
     }
 });
