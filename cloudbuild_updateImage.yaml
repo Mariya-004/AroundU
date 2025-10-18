@@ -1,21 +1,34 @@
-# In your cloudbuild.yaml 'steps' section
+# This file defines the steps for Google Cloud Build to automatically deploy your function.
 steps:
-  # --- Deploy the 'updateProductImage' function ---
+  # Step 1: Install Node.js dependencies
+  # This step runs 'npm install' in your function's directory to prepare it for deployment.
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['install']
+    # 'dir' specifies the directory where your function's code is located.
+    # Update this path if your folder structure is different.
+    dir: 'backend/functions/image-handler'
+
+  # Step 2: Deploy the function to Google Cloud Functions
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
       - 'functions'
       - 'deploy'
-      - 'updateProductImage' # The name of the exported function in index.js
+      # The name of the deployed function. Let's name it to match the export.
+      - 'handleImageUpload'
       - '--gen2'
       - '--runtime=nodejs22'
       - '--region=asia-south1'
-      - '--source=backend/functions/updateProductImage' # The directory containing the code
-      - '--entry-point=updateProductImage' # The name of the export
+      # The directory containing the code and node_modules.
+      - '--source=backend/functions/image-handler'
+      # The name of the export in your index.js file (e.g., exports.handleImageUpload = app).
+      - '--entry-point=handleImageUpload'
       - '--trigger-http'
       - '--allow-unauthenticated'
-      - '--timeout=300s'            # ✅ INCREASED TIMEOUT: Gives the function 5 minutes to complete
-      - '--memory=512MB'
-      - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET,GCS_BUCKET_NAME=$_GCS_BUCKET_NAME'
+      # Set environment variables from Cloud Build substitution variables.
+      # You must configure these (e.g., _MONGO_URI) in your Cloud Build trigger settings.
+      - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET,GCS_BUCKET_NAME=$_GCS_BUCKET_NAME,FRONTEND_URL=$_FRONTEND_URL'
+
+# Optional: Configure logging for the build process itself.
 options:
   logging: CLOUD_LOGGING_ONLY
