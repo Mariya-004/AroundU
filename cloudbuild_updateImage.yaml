@@ -4,24 +4,21 @@ steps:
   # This step runs 'npm install' in your function's directory to prepare it for deployment.
   - name: 'gcr.io/cloud-builders/npm'
     args: ['install']
-    # 'dir' specifies the directory where your function's code is located.
-    # Update this path if your folder structure is different.
-    dir: 'backend/functions/image-handler'
+    dir: 'backend/functions/image-handler' # The directory where your code is located
 
-  # Step 2: Deploy the function to Google Cloud Functions
+  # Step 2: Deploy the function
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
       - 'functions'
       - 'deploy'
-      # The name of the deployed function. Let's name it to match the export.
-      - 'handleImageUpload'
+      # The public name of the function, which determines its URL.
+      - 'updateProductImage'
       - '--gen2'
       - '--runtime=nodejs22'
       - '--region=asia-south1'
-      # The directory containing the code and node_modules.
-      - '--source=backend/functions/image-handler'
-      # The name of the export in your index.js file (e.g., exports.handleImageUpload = app).
+      - '--source=backend/functions/image-handler' # The directory containing the code
+      # This correctly points to the 'handleImageUpload' export in your index.js file.
       - '--entry-point=handleImageUpload'
       - '--trigger-http'
       - '--allow-unauthenticated'
@@ -29,6 +26,6 @@ steps:
       # You must configure these (e.g., _MONGO_URI) in your Cloud Build trigger settings.
       - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET,GCS_BUCKET_NAME=$_GCS_BUCKET_NAME,FRONTEND_URL=$_FRONTEND_URL'
 
-# Optional: Configure logging for the build process itself.
 options:
   logging: CLOUD_LOGGING_ONLY
+
