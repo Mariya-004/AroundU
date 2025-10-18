@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Storage } = require('@google-cloud/storage');
-const Busboy = require('busboy');
+const {Busboy} = require('busboy');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
