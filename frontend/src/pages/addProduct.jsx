@@ -51,10 +51,19 @@ export default function AddProduct() {
       );
 
       const addProductData = await addProductRes.json();
+
+      // ✅ EDITED: Added logging and validation to debug the API response
+      console.log('Response from /add_product API:', addProductData);
+      
       if (!addProductRes.ok) {
         throw new Error(addProductData.msg || 'Failed to create product');
       }
 
+      // ✅ EDITED: Validate the response structure before destructuring
+      if (!addProductData || !addProductData.newProduct || !addProductData.shop) {
+        throw new Error('Invalid response structure from the server after creating product.');
+      }
+      
       const { newProduct, shop } = addProductData;
       const newProductId = newProduct._id;
       const shopId = shop._id;
@@ -218,3 +227,4 @@ const buttonStyle = (loading) => ({
   transition: 'all 0.3s ease',
   marginTop: '10px'
 });
+
