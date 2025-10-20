@@ -9,8 +9,12 @@ const auth = require('./common/authMiddleware.js');
 
 const app = express();
 
+// --- Database Connection ---
+// Call connectDB here at the global scope for better performance in a serverless environment.
+connectDB();
+
 // --- CORS Configuration ---
-// This allows requests from your deployed frontend AND your local development environment.
+// This list now includes your local development environment as an allowed origin.
 const allowedOrigins = [
     'https://aroundu-frontend-164909903360.asia-south1.run.app',
     'http://localhost:3000'
@@ -18,7 +22,7 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
+    // Allow requests with no origin (like Postman or mobile apps)
     if (!origin) return callback(null, true);
     if (allowedOrigins.indexOf(origin) === -1) {
       const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
@@ -36,9 +40,9 @@ app.use(express.json());
 // --- Main Endpoint: Add a Product ---
 app.post('/', auth, async (req, res) => {
   try {
-    await connectDB();
+    console.log('[HANDLER] Add product handler started.');
 
-    // 1. Validate that the user has the 'shopkeeper' role from the JWT
+    // 1. Validate user role from the JWT payload
     if (req.user.role !== 'shopkeeper') {
       return res.status(403).json({ msg: 'Forbidden: This action requires a shopkeeper account.' });
     }
@@ -46,7 +50,7 @@ app.post('/', auth, async (req, res) => {
     // 2. Extract product details from the request body
     const { name, description, price, stock } = req.body;
 
-    // 3. Validate that all required fields are present
+    // 3. Validate required fields
     if (!name || !price || !stock) {
       return res.status(400).json({ msg: 'Product name, price, and stock are required fields.' });
     }
@@ -54,16 +58,17 @@ app.post('/', auth, async (req, res) => {
     // 4. Find the shop belonging to the authenticated user
     let shop = await Shop.findOne({ shopkeeperId: req.user.id });
 
-    // If the shopkeeper doesn't have a shop yet, create one automatically
+    // If the shopkeeper doesn't have a shop, create one automatically
     if (!shop) {
       console.log(`No shop found for shopkeeper ${req.user.id}, creating a new one.`);
       shop = new Shop({
         shopkeeperId: new mongoose.Types.ObjectId(req.user.id),
-        name: `${req.user.name}'s Shop`, // Use user's name for a better default
+        name: `${req.user.name || 'Shopkeeper'}'s Shop`, // Use user's name for a better default
         address: 'Default Address',
         location: { type: 'Point', coordinates: [0, 0] },
         products: [],
       });
+      await shop.save();
     }
 
     // 5. Create the new product object
@@ -74,18 +79,17 @@ app.post('/', auth, async (req, res) => {
       stock: parseInt(stock, 10),
     };
 
-    // 6. Add the new product to the shop's product list and save
+    // 6. Add the new product and save the shop
     shop.products.push(newProduct);
     await shop.save();
 
     console.log(`Product "${name}" added to shop ${shop._id}`);
 
-    // 7. Return a success response with the new product AND the shopId
-    // This is the response structure your frontend code is expecting.
+    // 7. Return the success response with the new product AND the shopId
     return res.status(201).json({
       msg: 'Product created successfully. You can now upload an image.',
       newProduct: shop.products[shop.products.length - 1],
-      shopId: shop._id // ✅ CRITICAL: Sending the shopId back to the client
+      shopId: shop._id
     });
 
   } catch (err) {
@@ -95,3 +99,4 @@ app.post('/', auth, async (req, res) => {
 });
 
 exports.add_product = app;
+
