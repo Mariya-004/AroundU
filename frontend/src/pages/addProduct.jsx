@@ -29,6 +29,7 @@ export default function AddProduct() {
     }
     setLoading(true);
     setMsg('');
+    console.clear(); // Clear console for clean logging
 
     try {
       const token = localStorage.getItem('token');
@@ -41,6 +42,10 @@ export default function AddProduct() {
       // --- Step 1: Create the product with text data ---
       setMsg('Step 1/4: Creating product...');
       const productData = { name, description, price, stock };
+      console.log('--- Step 1: Creating Product ---');
+      console.log('Request URL:', 'https://asia-south1-aroundu-473113.cloudfunctions.net/add_product');
+      console.log('Request Body:', JSON.stringify(productData, null, 2));
+
       const addProductRes = await fetch(
         'https://asia-south1-aroundu-473113.cloudfunctions.net/add_product',
         {
@@ -51,58 +56,83 @@ export default function AddProduct() {
       );
 
       const addProductData = await addProductRes.json();
-
-      // ✅ EDITED: Added logging and validation to debug the API response
-      console.log('Response from /add_product API:', addProductData);
+      
+      console.log('Response Status:', addProductRes.status);
+      console.log('Response Body from /add_product:', addProductData);
       
       if (!addProductRes.ok) {
         throw new Error(addProductData.msg || 'Failed to create product');
       }
 
-      // ✅ EDITED: Validate the response structure before destructuring
-      if (!addProductData || !addProductData.newProduct || !addProductData.shop) {
-        throw new Error('Invalid response structure from the server after creating product.');
+      if (!addProductData || !addProductData.newProduct || !addProductData.newProduct._id || !addProductData.shopId) {
+        throw new Error('Invalid API response: Expected { newProduct: {...}, shopId: "..." }.');
       }
       
-      const { newProduct, shop } = addProductData;
+      const { newProduct, shopId } = addProductData;
       const newProductId = newProduct._id;
-      const shopId = shop._id;
+
+      console.log(`Extracted shopId: ${shopId}, newProductId: ${newProductId}`);
 
       // --- Step 2: Get the secure, signed URL for the image upload ---
       setMsg('Step 2/4: Preparing image upload...');
-      const generateUrlRes = await fetch(
-        `https://asia-south1-aroundu-473113.cloudfunctions.net/updateProductImage/shops/${shopId}/products/${newProductId}/generate-upload-url`,
-        {
+      const generateUrlPayload = { fileType: imageFile.type };
+      const generateUrlEndpoint = `https://asia-south1-aroundu-473113.cloudfunctions.net/updateProductImage/shops/${shopId}/products/${newProductId}/generate-upload-url`;
+      
+      console.log('\n--- Step 2: Generating Signed URL ---');
+      console.log('Request URL:', generateUrlEndpoint);
+      console.log('Request Body:', JSON.stringify(generateUrlPayload, null, 2));
+
+      const generateUrlRes = await fetch(generateUrlEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ fileType: imageFile.type })
+            body: JSON.stringify(generateUrlPayload)
         }
       );
       const urlData = await generateUrlRes.json();
+
+      console.log('Response Status:', generateUrlRes.status);
+      console.log('Response Body from /generate-upload-url:', urlData);
+
       if (!generateUrlRes.ok) throw new Error(urlData.msg || 'Could not prepare image upload.');
       
       const { uploadUrl, publicUrl } = urlData;
 
       // --- Step 3: Upload the image file directly to Google Cloud Storage ---
       setMsg('Step 3/4: Uploading image...');
+      console.log('\n--- Step 3: Uploading Image File ---');
+      console.log('Uploading to (Signed URL):', uploadUrl);
+      console.log('Content-Type Header:', imageFile.type);
+
       const uploadRes = await fetch(uploadUrl, {
           method: 'PUT',
           headers: { 'Content-Type': imageFile.type },
           body: imageFile
       });
-      if (!uploadRes.ok) throw new Error('Image upload to cloud storage failed.');
+
+      console.log('Response Status from GCS:', uploadRes.status);
+
+      if (!uploadRes.ok) throw new Error('Image upload to cloud storage failed. Check network tab for details.');
       
       // --- Step 4: Save the final image URL to the database ---
       setMsg('Step 4/4: Finalizing product...');
-      const saveUrlRes = await fetch(
-          `https://asia-south1-aroundu-473113.cloudfunctions.net/updateProductImage/shops/${shopId}/products/${newProductId}/save-image-url`,
-          {
+      const saveUrlPayload = { imageUrl: publicUrl };
+      const saveUrlEndpoint = `https://asia-south1-aroundu-473113.cloudfunctions.net/updateProductImage/shops/${shopId}/products/${newProductId}/save-image-url`;
+      
+      console.log('\n--- Step 4: Saving Image URL ---');
+      console.log('Request URL:', saveUrlEndpoint);
+      console.log('Request Body:', JSON.stringify(saveUrlPayload, null, 2));
+
+      const saveUrlRes = await fetch(saveUrlEndpoint, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-              body: JSON.stringify({ imageUrl: publicUrl })
+              body: JSON.stringify(saveUrlPayload)
           }
       );
       const finalData = await saveUrlRes.json();
+
+      console.log('Response Status:', saveUrlRes.status);
+      console.log('Response Body from /save-image-url:', finalData);
+
       if (!saveUrlRes.ok) throw new Error(finalData.msg || 'Failed to finalize product.');
 
       setMsg(`✅ Product "${finalData.product.name}" added successfully!`);
@@ -110,6 +140,7 @@ export default function AddProduct() {
       setTimeout(() => navigate('/shopkeeper-dashboard'), 2000);
 
     } catch (err) {
+      console.error('An error occurred during the process:', err);
       setMsg(`❌ Error: ${err.message}`);
     } finally {
       setLoading(false);
@@ -121,7 +152,6 @@ export default function AddProduct() {
       <h2 style={{ fontSize: '1.8rem', marginBottom: 20, textAlign: 'center' }}>Add a New Product</h2>
 
       <form onSubmit={handleSubmit} style={formStyle}>
-        {/* Image Preview and File Input */}
         <div style={{ textAlign: 'center', marginBottom: '10px' }}>
           <label htmlFor="productImage" style={imageLabelStyle}>
             {imagePreview ? (
