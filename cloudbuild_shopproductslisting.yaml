@@ -1,7 +1,8 @@
 steps:
   # --- Step 1: Copy common code into the function's directory ---
-  # This fixes the error by making the 'common' folder available
-  - name: 'gcr.io/cloud-builders/cp'
+  # This is the new step that fixes the import errors
+  - name: 'alpine' # <-- This is the fix. 'alpine' is a valid, lightweight image with 'cp'
+    entrypoint: 'cp'
     args:
       - '-r' # Recursive copy
       - 'backend/functions/common' # The source directory to copy
@@ -14,7 +15,7 @@ steps:
 
   # --- Step 3: Deploy the shop_products function ---
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: gcloud
+    entrypoint: 'gcloud'
     args:
       - 'functions'
       - 'deploy'
@@ -22,13 +23,13 @@ steps:
       - '--gen2'
       - '--runtime=nodejs22'
       - '--region=asia-south1'
-      # Best practice: remove the './' from the source path
-      - '--source=backend/functions/shop_products'
+      - '--source=backend/functions/shop_products' # Removed './' for best practice
       - '--entry-point=shop_products'
       - '--trigger-http'
       - '--allow-unauthenticated'
-      # Removed GCS_BUCKET_NAME as this function's index.js doesn't use it
-      - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET'
+      # Correct, single-line env vars
+      - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET,GCS_BUCKET_NAME=$_GCS_BUCKET_NAME'
 
 options:
   logging: CLOUD_LOGGING_ONLY
+
