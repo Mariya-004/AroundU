@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -39,8 +40,9 @@ app.get('/', auth, async (req, res) => {
       return res.status(400).json({ msg: 'Product ID is required.' });
     }
 
+    // --- THIS IS THE FIX ---
     // Find the shop that contains this product
-    const shop = await Shop.findOne({ 'products._id': mongoose.Types.ObjectId(id) });
+    const shop = await Shop.findOne({ 'products._id': new mongoose.Types.ObjectId(id) });
 
     if (!shop) {
       return res.status(404).json({ msg: 'Product not found.' });
@@ -71,6 +73,10 @@ app.get('/', auth, async (req, res) => {
 
   } catch (err) {
     console.error('Error in get_product endpoint:', err);
+    // Check if the error is a bad ObjectId format
+    if (err.name === 'CastError' || err.message.includes('ObjectId')) {
+        return res.status(400).json({ msg: 'Invalid Product ID format.' });
+    }
     return res.status(500).json({ msg: 'Server Error', error: err.message });
   }
 });
