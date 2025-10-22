@@ -1,21 +1,12 @@
 # This Cloud Build configuration deploys the 'shop_products' Cloud Function (Gen 2)
 
 steps:
-  # --- Step 1: Copy common code into the function's directory ---
-  # This is necessary because the function imports from the 'common' directory
-  - name: 'alpine'
-    entrypoint: 'cp'
-    args:
-      - '-r' # Recursive copy
-      - 'backend/functions/common' # The source directory
-      - 'backend/functions/shop_products/common' # The destination
-
-  # --- Step 2: Install dependencies ---
+  # --- Step 1: Install dependencies ---
   - name: 'gcr.io/cloud-builders/npm'
     args: ['install']
     dir: 'backend/functions/shop_products' # Path to this specific function
 
-  # --- Step 3: Deploy the Cloud Function (using your preferred format) ---
+  # --- Step 2: Deploy the Cloud Function (using your preferred format) ---
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud' # Matching the format of your add_product example
     args:
