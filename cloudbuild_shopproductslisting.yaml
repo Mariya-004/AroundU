@@ -1,15 +1,24 @@
-# --- Deploy the 'shop_products' function ---
-- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  entrypoint: gcloud
-  args:
-    - 'functions'
-    - 'deploy'
-    - 'shop_products'
-    - '--gen2'
-    - '--runtime=nodejs22'
-    - '--region=asia-south1'
-    - '--source=./backend/functions/shop_products'
-    - '--entry-point=shop_products'
-    - '--trigger-http'
-    - '--allow-unauthenticated'
-    - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET'
+steps:
+  # --- Step 1: Install dependencies ---
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['install']
+    dir: 'backend/functions/shop_products'
+
+  # --- Step 2: Deploy the shop_products function ---
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'functions'
+      - 'deploy'
+      - 'shop_products'
+      - '--gen2'
+      - '--runtime=nodejs22'
+      - '--region=asia-south1'
+      - '--source=./backend/functions/shop_products'
+      - '--entry-point=shop_products'
+      - '--trigger-http'
+      - '--allow-unauthenticated'
+      - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET,GCS_BUCKET_NAME=$_GCS_BUCKET_NAME'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
