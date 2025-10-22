@@ -50,11 +50,13 @@ app.get('/', auth, async (req, res) => {
   }
 });
 
-// ✅ Keep export for Cloud Run entrypoint
+// ✅ Export Express app for Cloud Function
 exports.shop_products = app;
 
-// ✅ Start server only if this file is run directly
-if (require.main === module) {
+// ✅ Only start local server if NOT running in Google Cloud environment
+if (!process.env.K_SERVICE && require.main === module) {
   const PORT = process.env.PORT || 8080;
-  app.listen(PORT, () => console.log(`shop-products running on port ${PORT}`));
+  app.listen(PORT, () => console.log(`shop-products running locally on port ${PORT}`));
+}
+
 }
