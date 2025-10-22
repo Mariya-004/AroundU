@@ -1,35 +1,41 @@
+# This Cloud Build configuration deploys the 'shop_products' Cloud Function (Gen 2)
+
 steps:
   # --- Step 1: Copy common code into the function's directory ---
-  # This is the new step that fixes the import errors
-  - name: 'alpine' # <-- This is the fix. 'alpine' is a valid, lightweight image with 'cp'
+  # This is necessary because the function imports from the 'common' directory
+  - name: 'alpine'
     entrypoint: 'cp'
     args:
       - '-r' # Recursive copy
-      - 'backend/functions/common' # The source directory to copy
-      - 'backend/functions/shop_products/common' # The destination inside the function's folder
+      - 'backend/functions/common' # The source directory
+      - 'backend/functions/shop_products/common' # The destination
 
   # --- Step 2: Install dependencies ---
   - name: 'gcr.io/cloud-builders/npm'
     args: ['install']
-    dir: 'backend/functions/shop_products'
+    dir: 'backend/functions/shop_products' # Path to this specific function
 
-  # --- Step 3: Deploy the shop_products function ---
+  # --- Step 3: Deploy the Cloud Function (using your preferred format) ---
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'gcloud'
+    entrypoint: 'gcloud' # Matching the format of your add_product example
     args:
       - 'functions'
       - 'deploy'
-      - 'shop_products'
+      - 'shop_products' # The name of this function
       - '--gen2'
       - '--runtime=nodejs22'
       - '--region=asia-south1'
-      - '--source=backend/functions/shop_products' # Removed './' for best practice
-      - '--entry-point=shop_products'
+      - '--source=backend/functions/shop_products' # Source directory for this function
+      - '--entry-point=shop_products' # The export name from index.js
       - '--trigger-http'
       - '--allow-unauthenticated'
-      # Correct, single-line env vars
+      # Adding timeout and memory, which is good practice
+      - '--timeout=300s'
+      - '--memory=512MB'
+      # Using the single-line format for env vars
       - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET,GCS_BUCKET_NAME=$_GCS_BUCKET_NAME'
 
+# --- Optional: Log only to Cloud Logging (no stdout spam)
 options:
   logging: CLOUD_LOGGING_ONLY
 
