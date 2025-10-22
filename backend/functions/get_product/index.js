@@ -1,60 +1,78 @@
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
+
 const connectDB = require('./common/db.js');
 const Shop = require('./common/models/Shop.js');
-const User = require('./common/models/User.js');
 const auth = require('./common/authMiddleware.js');
 
 const app = express();
-app.use(cors({ origin: true }));
+
+// --- CORS Configuration ---
+const FRONTEND_URL = 'https://aroundu-frontend-164909903360.asia-south1.run.app';
+app.use(cors({
+  origin: FRONTEND_URL,
+  methods: ['GET', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
 app.use(express.json());
 
-connectDB();
+// Handle OPTIONS preflight
+app.options('*', (req, res) => {
+  res.set('Access-Control-Allow-Origin', FRONTEND_URL);
+  res.set('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.status(204).send('');
+});
 
+/**
+ * GET /get_product?id=<productId>
+ * Returns detailed info of the product and its shop.
+ */
 app.get('/', auth, async (req, res) => {
   try {
-    const userId = req.user.id;
-    const user = await User.findById(userId);
-    if (!user || user.role !== 'shopkeeper')
-      return res.status(403).json({ msg: 'Forbidden: Only shopkeepers can access this.' });
+    await connectDB();
+    const { id } = req.query;
 
-    const shop = await Shop.findOne({ shopkeeperId: userId });
-    if (!shop)
-      return res.status(404).json({ msg: 'Shop not found for this user.' });
+    if (!id) {
+      return res.status(400).json({ msg: 'Product ID is required.' });
+    }
 
-    if (!shop.products?.length)
-      return res.status(200).json({ msg: 'No products found.', products: [] });
+    // Find the shop that contains this product
+    const shop = await Shop.findOne({ 'products._id': mongoose.Types.ObjectId(id) });
 
-    const sortedProducts = shop.products.sort(
-      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-    );
+    if (!shop) {
+      return res.status(404).json({ msg: 'Product not found.' });
+    }
 
-    res.status(200).json({
-      msg: 'Products fetched successfully!',
-      shopName: shop.name,
+    // Extract the product details
+    const product = shop.products.id(id);
+
+    // Combine shop info and product details
+    const detailedProduct = {
       shopId: shop._id,
-      totalProducts: sortedProducts.length,
-      products: sortedProducts.map((p) => ({
-        id: p._id,
-        name: p.name,
-        description: p.description,
-        price: p.price,
-        stock: p.stock,
-        imageUrl: p.imageUrl || null,
-      })),
+      shopName: shop.name,
+      shopAddress: shop.address,
+      productId: product._id,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      stock: product.stock,
+      imageUrl: product.imageUrl || null,
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt,
+    };
+
+    return res.status(200).json({
+      msg: 'Product details fetched successfully.',
+      product: detailedProduct,
     });
+
   } catch (err) {
-    console.error('Error fetching shop products:', err);
-    res.status(500).json({ msg: 'Server Error', error: err.message });
+    console.error('Error in get_product endpoint:', err);
+    return res.status(500).json({ msg: 'Server Error', error: err.message });
   }
 });
 
-// ✅ Keep export for Cloud Run entrypoint
-exports.shop_products = app;
-
-// ✅ Start server only if this file is run directly
-if (require.main === module) {
-  const PORT = process.env.PORT || 8080;
-  app.listen(PORT, () => console.log(`shop-products running on port ${PORT}`));
-}
+exports.get_product = app;

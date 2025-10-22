@@ -10,36 +10,22 @@ const app = express();
 app.use(cors({ origin: true }));
 app.use(express.json());
 
-// Connect database once
 connectDB();
 
-/**
- * @route   GET /
- * @desc    Get all products of the authenticated shopkeeper's shop
- * @access  Private (Requires shopkeeper role)
- */
 app.get('/', auth, async (req, res) => {
   try {
     const userId = req.user.id;
     const user = await User.findById(userId);
-
-    if (!user || user.role !== 'shopkeeper') {
+    if (!user || user.role !== 'shopkeeper')
       return res.status(403).json({ msg: 'Forbidden: Only shopkeepers can access this.' });
-    }
 
     const shop = await Shop.findOne({ shopkeeperId: userId });
-    if (!shop) {
+    if (!shop)
       return res.status(404).json({ msg: 'Shop not found for this user.' });
-    }
 
-    if (!shop.products || shop.products.length === 0) {
-      return res.status(200).json({
-        msg: 'No products found in your shop.',
-        products: [],
-      });
-    }
+    if (!shop.products?.length)
+      return res.status(200).json({ msg: 'No products found.', products: [] });
 
-    // Sort products by most recent first
     const sortedProducts = shop.products.sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     );
@@ -64,4 +50,11 @@ app.get('/', auth, async (req, res) => {
   }
 });
 
+// ✅ Keep export for Cloud Run entrypoint
 exports.shop_products = app;
+
+// ✅ Start server only if this file is run directly
+if (require.main === module) {
+  const PORT = process.env.PORT || 8080;
+  app.listen(PORT, () => console.log(`shop-products running on port ${PORT}`));
+}
