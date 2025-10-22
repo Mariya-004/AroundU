@@ -1,10 +1,18 @@
 steps:
-  # --- Step 1: Install dependencies ---
+  # --- Step 1: Copy common code into the function's directory ---
+  # This fixes the error by making the 'common' folder available
+  - name: 'gcr.io/cloud-builders/cp'
+    args:
+      - '-r' # Recursive copy
+      - 'backend/functions/common' # The source directory to copy
+      - 'backend/functions/shop_products/common' # The destination inside the function's folder
+
+  # --- Step 2: Install dependencies ---
   - name: 'gcr.io/cloud-builders/npm'
     args: ['install']
     dir: 'backend/functions/shop_products'
 
-  # --- Step 2: Deploy the shop_products function ---
+  # --- Step 3: Deploy the shop_products function ---
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
@@ -14,11 +22,13 @@ steps:
       - '--gen2'
       - '--runtime=nodejs22'
       - '--region=asia-south1'
-      - '--source=./backend/functions/shop_products'
+      # Best practice: remove the './' from the source path
+      - '--source=backend/functions/shop_products'
       - '--entry-point=shop_products'
       - '--trigger-http'
       - '--allow-unauthenticated'
-      - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET,GCS_BUCKET_NAME=$_GCS_BUCKET_NAME'
+      # Removed GCS_BUCKET_NAME as this function's index.js doesn't use it
+      - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET'
 
 options:
   logging: CLOUD_LOGGING_ONLY
