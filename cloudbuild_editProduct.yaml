@@ -1,24 +1,31 @@
+# This Cloud Build configuration deploys the 'shop_products' Cloud Function (Gen 2)
+
 steps:
-  # Step 1: Install dependencies
+
+  # --- Step 2: Install dependencies ---
   - name: 'gcr.io/cloud-builders/npm'
     args: ['install']
-    dir: 'backend/functions/edit_product'
+    dir: 'backend/functions/edit_products' # Path to this specific function
 
-  # Step 2: Deploy the edit_product function
+  # --- Step 3: Deploy the Cloud Function ---
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: gcloud
+    entrypoint: 'gcloud'
     args:
       - 'functions'
       - 'deploy'
-      - 'edit_product'
+      - 'edit_products' # The name of this function
       - '--gen2'
       - '--runtime=nodejs22'
       - '--region=asia-south1'
-      - '--source=./backend/functions/edit_product'
-      - '--entry-point=edit_product'
+      - '--source=backend/functions/edit_products' # Source directory for this function
+      - '--entry-point=edit_products' # The export name from index.js
       - '--trigger-http'
       - '--allow-unauthenticated'
-      - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET'
+      - '--timeout=300s'
+      - '--memory=512MB'
+      - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET,GCS_BUCKET_NAME=$_GCS_BUCKET_NAME'
 
+# --- Optional: Log only to Cloud Logging (no stdout spam)
 options:
   logging: CLOUD_LOGGING_ONLY
+
