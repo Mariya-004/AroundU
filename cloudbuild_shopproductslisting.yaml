@@ -1,14 +1,6 @@
 # This Cloud Build configuration deploys the 'shop_products' Cloud Function (Gen 2)
 
 steps:
-  # --- Step 1: Copy common code into the function's directory ---
-  # This is REQUIRED because your index.js imports from './common'
-  - name: 'alpine'
-    entrypoint: 'cp'
-    args:
-      - '-r' # Recursive copy
-      - 'backend/functions/common' # The source directory
-      - 'backend/functions/shop_products/common' # The destination
 
   # --- Step 2: Install dependencies ---
   - name: 'gcr.io/cloud-builders/npm'
