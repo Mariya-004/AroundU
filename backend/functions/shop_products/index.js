@@ -1,62 +1,69 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
+
+// --- CRITICAL: Import common files from the copied 'common' folder ---
+// The cloudbuild.yaml file copies 'common' inside this directory
 const connectDB = require('./common/db.js');
 const Shop = require('./common/models/Shop.js');
-const User = require('./common/models/User.js');
+const User = require('./common/models/User.js'); // Assuming User model is needed for auth check
 const auth = require('./common/authMiddleware.js');
 
 const app = express();
-app.use(cors({ origin: true }));
-app.use(express.json());
 
+// --- Database Connection ---
 connectDB();
 
+// --- CORS Configuration ---
+const allowedOrigins = [
+    'https://aroundu-frontend-164909903360.asia-south1.run.app',
+    'http://localhost:3000'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS policy does not allow access from this origin.'));
+    }
+  },
+  methods: ['GET', 'OPTIONS'], // Only GET and OPTIONS are needed for this API
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+// Middleware to parse JSON bodies
+app.use(express.json());
+
+/**
+ * @route   GET /
+ * @desc    Get all products for the authenticated shopkeeper
+ * @access  Private (Shopkeeper)
+ */
 app.get('/', auth, async (req, res) => {
   try {
-    const userId = req.user.id;
-    const user = await User.findById(userId);
-    if (!user || user.role !== 'shopkeeper')
-      return res.status(403).json({ msg: 'Forbidden: Only shopkeepers can access this.' });
+    if (req.user.role !== 'shopkeeper') {
+      return res.status(403).json({ msg: 'Forbidden: User is not a shopkeeper.' });
+    }
 
-    const shop = await Shop.findOne({ shopkeeperId: userId });
-    if (!shop)
-      return res.status(404).json({ msg: 'Shop not found for this user.' });
-
-    if (!shop.products?.length)
-      return res.status(200).json({ msg: 'No products found.', products: [] });
-
-    const sortedProducts = shop.products.sort(
-      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-    );
+    const shop = await Shop.findOne({ shopkeeperId: req.user.id });
+    if (!shop) {
+      return res.status(404).json({ msg: 'Shop profile not found. Please create one.' });
+    }
 
     res.status(200).json({
-      msg: 'Products fetched successfully!',
+      msg: 'Products fetched successfully',
       shopName: shop.name,
       shopId: shop._id,
-      totalProducts: sortedProducts.length,
-      products: sortedProducts.map((p) => ({
-        id: p._id,
-        name: p.name,
-        description: p.description,
-        price: p.price,
-        stock: p.stock,
-        imageUrl: p.imageUrl || null,
-      })),
+      products: shop.products || [],
     });
   } catch (err) {
-    console.error('Error fetching shop products:', err);
-    res.status(500).json({ msg: 'Server Error', error: err.message });
+    console.error('Error fetching products:', err.message);
+    res.status(500).send('Server Error');
   }
 });
 
-// ✅ Export Express app for Cloud Function
+// This must match the --entry-point in your cloudbuild.yaml
 exports.shop_products = app;
 
-// ✅ Only start local server if NOT running in Google Cloud environment
-if (!process.env.K_SERVICE && require.main === module) {
-  const PORT = process.env.PORT || 8080;
-  app.listen(PORT, () => console.log(`shop-products running locally on port ${PORT}`));
-}
-
-}
