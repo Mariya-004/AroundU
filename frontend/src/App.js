@@ -13,6 +13,7 @@ import CustomerMap from "./pages/customermap"; // Uncomment if using the map pag
 import AddProduct from "./pages/addProduct";
 import ShopProductList from "./pages/shopproductsview";
 import ShopkeeperEditProducts from "./pages/editProduct";
+import SearchResultsPage from "./pages/SearchResultsPage";
 function App() {
   return (
     <Router>
@@ -30,6 +31,7 @@ function App() {
         <Route path="/add-product" element={<AddProduct />} />
         <Route path="/shop-products" element={<ShopProductList />} />
         <Route path="/edit-product/:shopId/:productId" element={<ShopkeeperEditProducts />} />
+        <Route path="/search-results" element={<SearchResultsPage />} />
         {/* ...other routes... */}
       </Routes>
     </Router>
