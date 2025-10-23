@@ -1,213 +1,169 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 
-export default function ShopkeeperEditProducts() {
-  const [products, setProducts] = useState([]);
-  const [shopId, setShopId] = useState("");
-  const [editingProduct, setEditingProduct] = useState(null);
+export default function EditProduct() {
+  const { shopId, productId } = useParams();
+  const navigate = useNavigate();
+  const [product, setProduct] = useState({
+    name: "",
+    description: "",
+    price: "",
+    stock: "",
+    imageUrl: "",
+  });
   const [message, setMessage] = useState("");
 
-  // ✅ Fetch all products from the shop_products API
+  // ✅ Fetch existing product details (from shop_products API)
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchProduct = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch("https://asia-south1-aroundu-473113.cloudfunctions.net/shop_products", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetch(
+          `https://asia-south1-aroundu-473113.cloudfunctions.net/shop_products`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
         const data = await res.json();
-
-        if (data.products) {
-          setProducts(data.products);
-          setShopId(data.shopId);
-        } else {
-          setMessage("No products found for this shop.");
-        }
+        const found = data.products?.find((p) => p._id === productId);
+        if (found) setProduct(found);
+        else setMessage("Product not found.");
       } catch (err) {
-        console.error("Error fetching products:", err);
-        setMessage("Failed to load products.");
+        setMessage("Error fetching product details.");
       }
     };
+    fetchProduct();
+  }, [productId]);
 
-    fetchProducts();
-  }, []);
-
-  // ✅ Handle field changes for editable form
+  // ✅ Handle changes
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setEditingProduct((prev) => ({ ...prev, [name]: value }));
+    setProduct((prev) => ({ ...prev, [name]: value }));
   };
 
-  // ✅ Handle edit button click
-  const handleEdit = (product) => {
-    setEditingProduct(product);
-  };
+  // ✅ Handle update
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    setMessage("");
 
-  // ✅ Handle save/update
-  const handleSave = async () => {
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(
-        `https://asia-south1-aroundu-473113.cloudfunctions.net/edit_products/shops/${shopId}/products/${editingProduct._id}`,
+        `https://asia-south1-aroundu-473113.cloudfunctions.net/edit_products/shops/${shopId}/products/${productId}`,
         {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(editingProduct),
+          body: JSON.stringify(product),
         }
       );
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.msg);
-
-      // Update product list locally
-      setProducts((prev) =>
-        prev.map((p) => (p._id === editingProduct._id ? editingProduct : p))
-      );
-      setMessage("✅ Product updated successfully!");
-      setEditingProduct(null);
+      if (!res.ok) {
+        setMessage(data.msg || "Failed to update product");
+      } else {
+        setMessage("✅ Product updated successfully!");
+        setTimeout(() => navigate("/shop-products"), 1500);
+      }
     } catch (err) {
-      console.error("Update error:", err);
-      setMessage("❌ Failed to update product.");
+      setMessage("❌ Server error while updating product.");
     }
   };
 
   return (
-    <div style={styles.page}>
-      <h2 style={styles.heading}>🛍️ Edit Your Products</h2>
-
+    <div style={styles.container}>
+      <h2 style={styles.title}>Edit Product</h2>
       {message && <p style={styles.message}>{message}</p>}
 
-      {products.length === 0 ? (
-        <p>No products available.</p>
-      ) : (
-        <div style={styles.grid}>
-          {products.map((product) => (
-            <div key={product._id} style={styles.card}>
-              {editingProduct && editingProduct._id === product._id ? (
-                <>
-                  <input
-                    type="text"
-                    name="name"
-                    value={editingProduct.name}
-                    onChange={handleChange}
-                    style={styles.input}
-                  />
-                  <textarea
-                    name="description"
-                    value={editingProduct.description}
-                    onChange={handleChange}
-                    rows={2}
-                    style={styles.input}
-                  />
-                  <input
-                    type="number"
-                    name="price"
-                    value={editingProduct.price}
-                    onChange={handleChange}
-                    style={styles.input}
-                    placeholder="Price"
-                  />
-                  <input
-                    type="number"
-                    name="stock"
-                    value={editingProduct.stock}
-                    onChange={handleChange}
-                    style={styles.input}
-                    placeholder="Stock"
-                  />
-                  <input
-                    type="text"
-                    name="imageUrl"
-                    value={editingProduct.imageUrl || ""}
-                    onChange={handleChange}
-                    style={styles.input}
-                    placeholder="Image URL"
-                  />
-                  <button onClick={handleSave} style={styles.saveBtn}>💾 Save</button>
-                </>
-              ) : (
-                <>
-                  <img
-                    src={product.imageUrl || "https://via.placeholder.com/100"}
-                    alt={product.name}
-                    style={styles.image}
-                  />
-                  <h4>{product.name}</h4>
-                  <p>₹{product.price}</p>
-                  <p>Stock: {product.stock}</p>
-                  <button onClick={() => handleEdit(product)} style={styles.editBtn}>
-                    ✏️ Edit
-                  </button>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      <form onSubmit={handleUpdate} style={styles.form}>
+        <input
+          type="text"
+          name="name"
+          value={product.name}
+          onChange={handleChange}
+          placeholder="Product Name"
+          required
+          style={styles.input}
+        />
+        <textarea
+          name="description"
+          value={product.description}
+          onChange={handleChange}
+          placeholder="Description"
+          rows="3"
+          style={styles.input}
+        />
+        <input
+          type="number"
+          name="price"
+          value={product.price}
+          onChange={handleChange}
+          placeholder="Price"
+          required
+          style={styles.input}
+        />
+        <input
+          type="number"
+          name="stock"
+          value={product.stock}
+          onChange={handleChange}
+          placeholder="Stock"
+          required
+          style={styles.input}
+        />
+        <input
+          type="text"
+          name="imageUrl"
+          value={product.imageUrl || ""}
+          onChange={handleChange}
+          placeholder="Image URL"
+          style={styles.input}
+        />
+
+        <button type="submit" style={styles.btn}>
+          💾 Update Product
+        </button>
+      </form>
     </div>
   );
 }
 
 const styles = {
-  page: {
+  container: {
+    background: "#fff",
     padding: "30px",
+    borderRadius: "12px",
+    maxWidth: "600px",
+    margin: "50px auto",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
     fontFamily: "Poppins, sans-serif",
-    background: "#f9f9f9",
-    minHeight: "100vh",
   },
-  heading: {
+  title: {
     textAlign: "center",
-    marginBottom: "20px",
     color: "#144139",
+    marginBottom: "20px",
   },
   message: {
     textAlign: "center",
-    color: "#006400",
-    fontWeight: "500",
-  },
-  grid: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "20px",
-    justifyContent: "center",
-  },
-  card: {
-    width: "250px",
-    background: "#fff",
-    padding: "15px",
-    borderRadius: "12px",
-    boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
-    textAlign: "center",
-  },
-  image: {
-    width: "100%",
-    height: "150px",
-    objectFit: "cover",
-    borderRadius: "8px",
+    color: "green",
     marginBottom: "10px",
+  },
+  form: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "15px",
   },
   input: {
-    width: "100%",
-    padding: "8px",
-    marginBottom: "10px",
+    padding: "12px",
     borderRadius: "8px",
     border: "1px solid #ccc",
   },
-  editBtn: {
+  btn: {
+    padding: "12px",
     background: "#C8A46B",
-    color: "#fff",
+    color: "#144139",
+    fontWeight: "bold",
     border: "none",
-    padding: "8px 12px",
-    borderRadius: "8px",
-    cursor: "pointer",
-  },
-  saveBtn: {
-    background: "#28a745",
-    color: "#fff",
-    border: "none",
-    padding: "8px 12px",
     borderRadius: "8px",
     cursor: "pointer",
   },
