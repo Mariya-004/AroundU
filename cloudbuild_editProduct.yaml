@@ -18,7 +18,7 @@ steps:
       - '--runtime=nodejs22'
       - '--region=asia-south1'
       - '--source=backend/functions/edit_products' # Source directory for this function
-      - '--entry-point=edit_products' # The export name from index.js
+      - '--entry-point=edit_product' # The export name from index.js
       - '--trigger-http'
       - '--allow-unauthenticated'
       - '--timeout=300s'
