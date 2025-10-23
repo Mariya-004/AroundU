@@ -29,7 +29,7 @@ function App() {
         <Route path="/customer-map" element={<CustomerMap />} />
         <Route path="/add-product" element={<AddProduct />} />
         <Route path="/shop-products" element={<ShopProductList />} />
-        <Route path="/edit-product" element={<ShopkeeperEditProducts />} />
+        <Route path="/edit-product/:shopId/:productId" element={<ShopkeeperEditProducts />} />
         {/* ...other routes... */}
       </Routes>
     </Router>
