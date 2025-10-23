@@ -1,140 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 
-export default function ShopkeeperDashboard() {
-  const navigate = useNavigate();
-
-  const stats = {
-    totalSales: "$2,450",
-    totalOrders: 32,
-    pendingOrders: 5,
-    priorityAlerts: 1,
-  };
-
-  const recentOrders = [
-    { id: "#10524", customer: "Emily Carter", date: "12 Dec 2023", total: "$210.75" },
-    { id: "#10523", customer: "John Doe", date: "12 Dec 2023", total: "$150.00" },
-    { id: "#10522", customer: "Alice Brown", date: "11 Dec 2023", total: "$89.99" },
-    { id: "#10521", customer: "Brian Clark", date: "11 Dec 2023", total: "$120.00" },
-    { id: "#10520", customer: "Steve Smith", date: "10 Dec 2023", total: "$75.50" },
-  ];
-
-  return (
-    <div style={{ background: "#fff", minHeight: "100vh", padding: "30px", fontFamily: "Poppins, sans-serif", color: "#144139" }}>
-      <h2 style={{ fontSize: "1.8rem", marginBottom: "20px" }}>Shopkeeper Dashboard</h2>
-
-      {/* Setup Profile Button */}
-      <div style={{ marginBottom: "20px" }}>
-        <button
-          style={{
-            ...actionBtnStyle,
-            background: "#C8A46B",
-            color: "#144139",
-            marginBottom: "10px"
-          }}
-          onClick={() => navigate("/shopkeeper-setup-profile")}
-        >
-          Set Up Your Profile
-        </button>
-      </div>
-
-      {/* Stats */}
-      <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", marginBottom: "30px" }}>
-        {Object.entries(stats).map(([label, value]) => (
-          <div
-            key={label}
-            style={{
-              flex: "1 1 200px",
-              background: "#f9f9f9",
-              padding: "20px",
-              borderRadius: "10px",
-              textAlign: "center",
-              fontWeight: "600",
-            }}
-          >
-            <p style={{ marginBottom: "8px" }}>{label.replace(/([A-Z])/g, " $1")}</p>
-            <h3 style={{ margin: 0 }}>{value}</h3>
-          </div>
-        ))}
-      </div>
-
-      {/*{/* Quick Actions 
-      <div style={{ marginBottom: "30px" }}>
-        <h3 style={{ fontSize: "1.2rem", marginBottom: "10px" }}>Quick Actions</h3>
-        <div style={{ display: "flex", gap: "15px" }}>
-          <button style={actionBtnStyle} onClick={() => navigate('/add-product')} > Add New Product</button>
-          <button style={actionBtnStyle}>View Insights</button>
-        </div>
-      </div>*/}
-
-      {/* Recent Orders */}
-      <div>
-        <h3 style={{ fontSize: "1.2rem", marginBottom: "10px" }}>Recent Orders</h3>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={tableHeaderStyle}>
-              <th>Order ID</th>
-              <th>Customer</th>
-              <th>Date</th>
-              <th>Total</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {recentOrders.map((order) => (
-              <tr key={order.id} style={tableRowStyle}>
-                <td>{order.id}</td>
-                <td>{order.customer}</td>
-                <td>{order.date}</td>
-                <td>{order.total}</td>
-                <td>
-                  <button style={{ ...actionBtnStyle, padding: "6px 12px", fontSize: "0.9rem" }}>View</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Add Product Button */}
-      <div style={{ marginTop: "30px" }}>
-        <button
-          style={{
-            background: "#19c37d",
-            color: "#fff",
-            border: "none",
-            borderRadius: 8,
-            padding: "12px 24px",
-            fontWeight: 700,
-            fontSize: 16,
-            margin: "24px 0",
-            cursor: "pointer"
-          }}
-          onClick={() => navigate('/add-product')}
-        >
-          + Add Product
-        </button>
-         <button
-          style={{
-            background: "#144139",
-            color: "#fff",
-            border: "none",
-            borderRadius: 8,
-            padding: "12px 24px",
-            fontWeight: 700,
-            fontSize: 16,
-            margin: "24px 0",
-            cursor: "pointer"
-          }}
-          onClick={() => navigate('/shop-products')}
-        >
-          View Your Products
-        </button>
-      </div>
-    </div>
-  );
-}
-
+// Define styles outside the component for cleaner JSX
 const actionBtnStyle = {
   padding: "10px 20px",
   background: "#144139",
@@ -143,6 +10,7 @@ const actionBtnStyle = {
   borderRadius: "8px",
   cursor: "pointer",
   fontWeight: "bold",
+  marginRight: "10px", // Added for spacing between buttons
 };
 
 const tableHeaderStyle = {
@@ -154,5 +22,131 @@ const tableHeaderStyle = {
 
 const tableRowStyle = {
   borderBottom: "1px solid #ddd",
-  padding: "12px",
 };
+
+export default function ShopkeeperDashboard() {
+  const navigate = useNavigate();
+
+  // Placeholder function for handling logout
+  const handleLogout = () => {
+    // In a real application, you would clear auth tokens,
+    // update state, and redirect the user.
+    console.log("Logging out...");
+    navigate("/login"); // Assuming a login route
+  };
+
+  // Define the standard dashboard features
+  const quickActions = [
+    { label: "+ Add Product", path: "/add-product", color: "#19c37d", textColor: "#fff" },
+    { label: "View Your Products", path: "/shop-products", color: "#144139", textColor: "#fff" },
+    { label: "View Insights", path: "/shop-insights", color: "#C8A46B", textColor: "#144139" },
+  ];
+
+  return (
+    <div style={{ background: "#fff", minHeight: "100vh", padding: "30px", fontFamily: "Poppins, sans-serif", color: "#144139" }}>
+      {/* Header with Logout Button */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" }}>
+        <h2 style={{ fontSize: "1.8rem", margin: 0 }}>Shopkeeper Dashboard</h2>
+        <button
+          style={{ ...actionBtnStyle, background: "#dc3545", marginRight: 0 }} // Use a red color for logout
+          onClick={handleLogout}
+        >
+          Logout
+        </button>
+      </div>
+
+      {/* --- */}
+
+      {/* Profile Setup / Onboarding Alert */}
+      <div style={{ marginBottom: "30px", border: "1px solid #C8A46B", padding: "15px", borderRadius: "8px", background: "#fffaf0" }}>
+        <h3 style={{ fontSize: "1.2rem", color: "#C8A46B", margin: "0 0 10px 0" }}>⚠️ Setup Required</h3>
+        <p style={{ margin: "0 0 15px 0" }}>Please complete your shop profile to unlock all features.</p>
+        <button
+          style={{
+            ...actionBtnStyle,
+            background: "#C8A46B",
+            color: "#144139",
+            fontWeight: "600",
+            padding: "8px 15px"
+          }}
+          onClick={() => navigate("/shopkeeper-setup-profile")}
+        >
+          Set Up Your Profile
+        </button>
+      </div>
+
+      {/* --- */}
+
+      {/* Key Stats (Empty/Placeholder) */}
+      <h3 style={{ fontSize: "1.2rem", marginBottom: "15px" }}>Key Metrics (Placeholder)</h3>
+      <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", marginBottom: "40px" }}>
+        {['Total Sales', 'Total Orders', 'Pending Orders', 'Priority Alerts'].map((label) => (
+          <div
+            key={label}
+            style={{
+              flex: "1 1 200px",
+              background: "#f9f9f9",
+              padding: "20px",
+              borderRadius: "10px",
+              textAlign: "center",
+              fontWeight: "600",
+              minWidth: "180px",
+            }}
+          >
+            <p style={{ marginBottom: "8px", color: "#777" }}>{label}</p>
+            <h3 style={{ margin: 0, fontSize: "1.8rem" }}>---</h3> {/* Placeholder content */}
+          </div>
+        ))}
+      </div>
+
+      {/* --- */}
+
+      {/* Quick Actions */}
+      <h3 style={{ fontSize: "1.2rem", marginBottom: "15px" }}>Quick Actions</h3>
+      <div style={{ marginBottom: "40px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+        {quickActions.map((action) => (
+          <button
+            key={action.label}
+            style={{
+              ...actionBtnStyle,
+              background: action.color,
+              color: action.textColor,
+              // Overriding actionBtnStyle's default margin on the last button
+              marginRight: "0",
+              marginBottom: "10px", // For wrapping
+            }}
+            onClick={() => navigate(action.path)}
+          >
+            {action.label}
+          </button>
+        ))}
+      </div>
+
+      {/* --- */}
+
+      {/* Recent Orders (Empty/Placeholder) */}
+      <div>
+        <h3 style={{ fontSize: "1.2rem", marginBottom: "15px" }}>Recent Orders (Placeholder)</h3>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={tableHeaderStyle}>
+              <th style={{ padding: "12px" }}>Order ID</th>
+              <th style={{ padding: "12px" }}>Customer</th>
+              <th style={{ padding: "12px" }}>Date</th>
+              <th style={{ padding: "12px" }}>Total</th>
+              <th style={{ padding: "12px" }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {/* Conditional rendering for real data goes here */}
+            <tr>
+              <td colSpan="5" style={{ textAlign: "center", padding: "20px", color: "#777" }}>
+                No recent orders found.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
