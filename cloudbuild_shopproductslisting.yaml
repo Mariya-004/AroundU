@@ -1,14 +1,23 @@
 # This Cloud Build configuration deploys the 'shop_products' Cloud Function (Gen 2)
 
 steps:
-  # --- Step 1: Install dependencies ---
+  # --- Step 1: Copy common code into the function's directory ---
+  # This is REQUIRED because your index.js imports from './common'
+  - name: 'alpine'
+    entrypoint: 'cp'
+    args:
+      - '-r' # Recursive copy
+      - 'backend/functions/common' # The source directory
+      - 'backend/functions/shop_products/common' # The destination
+
+  # --- Step 2: Install dependencies ---
   - name: 'gcr.io/cloud-builders/npm'
     args: ['install']
     dir: 'backend/functions/shop_products' # Path to this specific function
 
-  # --- Step 2: Deploy the Cloud Function (using your preferred format) ---
+  # --- Step 3: Deploy the Cloud Function ---
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'gcloud' # Matching the format of your add_product example
+    entrypoint: 'gcloud'
     args:
       - 'functions'
       - 'deploy'
@@ -20,10 +29,8 @@ steps:
       - '--entry-point=shop_products' # The export name from index.js
       - '--trigger-http'
       - '--allow-unauthenticated'
-      # Adding timeout and memory, which is good practice
       - '--timeout=300s'
       - '--memory=512MB'
-      # Using the single-line format for env vars
       - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET,GCS_BUCKET_NAME=$_GCS_BUCKET_NAME'
 
 # --- Optional: Log only to Cloud Logging (no stdout spam)
