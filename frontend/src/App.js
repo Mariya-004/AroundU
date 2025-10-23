@@ -12,6 +12,7 @@ import CustomerProfile from "./pages/customerProfile";
 import CustomerMap from "./pages/customermap"; // Uncomment if using the map page
 import AddProduct from "./pages/addProduct";
 import ShopProductList from "./pages/shopproductsview";
+import ShopkeeperEditProducts from "./pages/editProduct";
 function App() {
   return (
     <Router>
@@ -28,6 +29,7 @@ function App() {
         <Route path="/customer-map" element={<CustomerMap />} />
         <Route path="/add-product" element={<AddProduct />} />
         <Route path="/shop-products" element={<ShopProductList />} />
+        <Route path="/edit-product" element={<ShopkeeperEditProducts />} />
         {/* ...other routes... */}
       </Routes>
     </Router>
