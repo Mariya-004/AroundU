@@ -11,6 +11,7 @@ import DeliveryAgentProfileSetup from "./pages/deliveryagentsetprofile";
 import CustomerProfile from "./pages/customerProfile";
 import CustomerMap from "./pages/customermap"; // Uncomment if using the map page
 import AddProduct from "./pages/addProduct";
+import ShopProductList from "./pages/shopproductsview";
 function App() {
   return (
     <Router>
@@ -26,6 +27,7 @@ function App() {
         <Route path="/customer-profile" element={<CustomerProfile />} />
         <Route path="/customer-map" element={<CustomerMap />} />
         <Route path="/add-product" element={<AddProduct />} />
+        <Route path="/shop-products" element={<ShopProductList />} />
         {/* ...other routes... */}
       </Routes>
     </Router>

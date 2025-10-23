@@ -114,6 +114,22 @@ export default function ShopkeeperDashboard() {
         >
           + Add Product
         </button>
+         <button
+          style={{
+            background: "#144139",
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            padding: "12px 24px",
+            fontWeight: 700,
+            fontSize: 16,
+            margin: "24px 0",
+            cursor: "pointer"
+          }}
+          onClick={() => navigate('/shop-products')}
+        >
+          View Your Products
+        </button>
       </div>
     </div>
   );
