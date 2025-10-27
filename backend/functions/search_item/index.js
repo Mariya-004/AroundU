@@ -45,7 +45,8 @@ app.get('/', async (req, res) => {
         shopId: '$_id',
         shopName: '$name',
         shopAddress: '$address',
-        product: '$products'
+        product: '$products',
+        productImageUrl: '$products.imageUrl'
       }
     });
 
