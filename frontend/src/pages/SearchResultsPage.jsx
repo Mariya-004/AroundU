@@ -37,6 +37,19 @@ const imagePlaceholderStyle = {
   fontWeight: '600',
 };
 
+// --- NEW: image style + small inline SVG fallback ---
+const imageStyle = {
+  width: "80px",
+  height: "80px",
+  borderRadius: "8px",
+  objectFit: "cover",
+  flexShrink: 0,
+};
+
+const fallbackImage = `data:image/svg+xml;utf8,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="100%" height="100%" fill="${neutralBg}"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="${primaryColor}" font-size="12">Item</text></svg>`
+)}`;
+
 const addToCartBtnStyle = {
   padding: "8px 15px",
   background: secondaryColor,
@@ -156,13 +169,23 @@ export default function SearchResultsPage() {
       {!loading && results.length > 0 && (
         <div>
           {results.map((result) => (
-            // Note: The API response structure seems to be { product: {...}, shopName: '...', shopId: '...' }
             <div key={result.product.id || result.product._id} style={productItemStyle}>
               
-              {/* Product Image Placeholder */}
-              <div style={imagePlaceholderStyle}>
-                Item
-              </div>
+              {/* Product Image: prefer productImageUrl from the API, fallback to product.imageUrl */}
+              {(() => {
+                const imgUrl = result.productImageUrl || result.product.imageUrl || '';
+                if (imgUrl) {
+                  return (
+                    <img
+                      src={imgUrl}
+                      alt={result.product.name || 'product'}
+                      style={imageStyle}
+                      onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = fallbackImage; }}
+                    />
+                  );
+                }
+                return <div style={imagePlaceholderStyle}>Item</div>;
+              })()}
 
               {/* Product Details */}
               <div style={{ flexGrow: 1 }}>
