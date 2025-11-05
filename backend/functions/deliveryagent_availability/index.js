@@ -42,8 +42,8 @@ app.use(express.json());
  */
 app.get('/', auth, async (req, res) => {
   try {
-    if (req.user.role !== 'delivery_agent') {
-      return res.status(403).json({ msg: 'Forbidden: Only delivery agents can access this.' });
+    if (req.user.role !== 'shopkeeper') {
+      return res.status(403).json({ msg: 'Forbidden: Only shopkeeper can access this.' });
     }
 
     const user = await User.findById(req.user.id).select('-password');
