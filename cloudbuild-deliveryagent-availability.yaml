@@ -1,0 +1,24 @@
+steps:
+  # Step 1: Install dependencies
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['install']
+    dir: 'backend/functions/delivery_availability'
+
+  # Step 2: Deploy function
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'functions'
+      - 'deploy'
+      - 'delivery_availability'
+      - '--gen2'
+      - '--runtime=nodejs22'
+      - '--region=asia-south1'
+      - '--source=./backend/functions/delivery_availability'
+      - '--entry-point=delivery_availability'
+      - '--trigger-http'
+      - '--allow-unauthenticated'
+      - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
