@@ -9,10 +9,9 @@ const auth = require('./common/authMiddleware.js');
 const app = express();
 
 // --- Database Connection ---
-// Connect once globally for efficiency in Cloud Functions
 connectDB();
 
-// --- CORS Configuration ---
+// --- CORS Setup ---
 const allowedOrigins = [
   'https://aroundu-frontend-164909903360.asia-south1.run.app',
   'http://localhost:3000'
@@ -20,43 +19,45 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow Postman or local calls with no origin
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
+    if (!origin) return callback(null, true); // Allow Postman/local
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('CORS not allowed for this origin.'));
   },
   methods: ['GET', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// --- JSON Parser ---
 app.use(express.json());
 
 /**
  * @route   GET /
- * @desc    Get the current availability status of the logged-in delivery agent
- * @access  Private (Delivery Agent Only)
+ * @desc    Get availability status
+ * @access  Private
+ *  - Delivery agents can view their own status.
+ *  - Shopkeepers can view all delivery agents’ statuses.
  */
 app.get('/', auth, async (req, res) => {
   try {
-    if (req.user.role !== 'shopkeeper') {
-      return res.status(403).json({ msg: 'Forbidden: Only shopkeeper can access this.' });
+    // Allow both shopkeepers and delivery agents to view
+    if (!["delivery_agent", "shopkeeper"].includes(req.user.role)) {
+      return res.status(403).json({ msg: 'Forbidden: Unauthorized role.' });
     }
 
-    const user = await User.findById(req.user.id).select('-password');
-
-    if (!user) {
-      return res.status(404).json({ msg: 'Delivery agent not found.' });
+    // If delivery agent → return their own status
+    if (req.user.role === 'delivery_agent') {
+      const user = await User.findById(req.user.id).select('-password');
+      if (!user) return res.status(404).json({ msg: 'Delivery agent not found.' });
+      return res.status(200).json({
+        msg: 'Your availability fetched successfully.',
+        isAvailable: user.isAvailable || false,
+        location: user.location || null,
+      });
     }
 
-    return res.status(200).json({
-      msg: 'Availability fetched successfully.',
-      isAvailable: user.isAvailable || false,
-      location: user.location || null,
-    });
+    // If shopkeeper → return all delivery agents
+    const agents = await User.find({ role: 'delivery_agent' })
+      .select('name isAvailable location');
+    return res.status(200).json({ msg: 'All agents fetched.', agents });
 
   } catch (err) {
     console.error('Error fetching availability:', err);
@@ -67,7 +68,7 @@ app.get('/', auth, async (req, res) => {
 
 /**
  * @route   PATCH /
- * @desc    Update delivery agent availability (online/offline) and optionally live location
+ * @desc    Update delivery agent availability and location
  * @access  Private (Delivery Agent Only)
  */
 app.patch('/', auth, async (req, res) => {
@@ -78,7 +79,6 @@ app.patch('/', auth, async (req, res) => {
 
     const { isAvailable, latitude, longitude } = req.body;
 
-    // Basic validation
     if (typeof isAvailable !== 'boolean') {
       return res.status(400).json({ msg: 'isAvailable (boolean) is required.' });
     }
@@ -88,7 +88,7 @@ app.patch('/', auth, async (req, res) => {
     if (latitude && longitude) {
       updateData.location = {
         type: 'Point',
-        coordinates: [longitude, latitude], // GeoJSON expects [lng, lat]
+        coordinates: [longitude, latitude], // GeoJSON format
       };
     }
 
@@ -96,7 +96,7 @@ app.patch('/', auth, async (req, res) => {
       req.user.id,
       { $set: updateData },
       { new: true }
-    ).select('-password');
+    ).select('name isAvailable location');
 
     if (!updatedAgent) {
       return res.status(404).json({ msg: 'Delivery agent not found.' });
@@ -104,12 +104,7 @@ app.patch('/', auth, async (req, res) => {
 
     res.status(200).json({
       msg: 'Availability updated successfully.',
-      agent: {
-        id: updatedAgent._id,
-        name: updatedAgent.name,
-        isAvailable: updatedAgent.isAvailable,
-        location: updatedAgent.location || null,
-      }
+      agent: updatedAgent,
     });
 
   } catch (err) {
@@ -118,5 +113,5 @@ app.patch('/', auth, async (req, res) => {
   }
 });
 
-// --- Export the function for Google Cloud Function Deployment ---
+// --- Export for Google Cloud Function ---
 exports.deliveryagent_availability = app;
