@@ -1,24 +1,31 @@
+# This Cloud Build configuration deploys the 'shop_products' Cloud Function (Gen 2)
+
 steps:
-  # Step 1: Install dependencies
+
+  # --- Step 2: Install dependencies ---
   - name: 'gcr.io/cloud-builders/npm'
     args: ['install']
-    dir: 'backend/functions/delivery_availability'
+    dir: 'backend/functions/deliveryagent_availability' # Path to this specific function
 
-  # Step 2: Deploy function
+  # --- Step 3: Deploy the Cloud Function ---
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: gcloud
+    entrypoint: 'gcloud'
     args:
       - 'functions'
       - 'deploy'
-      - 'delivery_availability'
+      - 'deliveryagent_availability' # The name of this function
       - '--gen2'
       - '--runtime=nodejs22'
       - '--region=asia-south1'
-      - '--source=./backend/functions/delivery_availability'
-      - '--entry-point=delivery_availability'
+      - '--source=backend/functions/deliveryagent_availability' # Source directory for this function
+      - '--entry-point=deliveryagent_availability' # The export name from index.js
       - '--trigger-http'
       - '--allow-unauthenticated'
+      - '--timeout=300s'
+      - '--memory=512MB'
       - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET'
 
+# --- Optional: Log only to Cloud Logging (no stdout spam)
 options:
   logging: CLOUD_LOGGING_ONLY
+
