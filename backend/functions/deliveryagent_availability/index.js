@@ -38,14 +38,15 @@ app.use(express.json());
  */
 app.get('/', auth, async (req, res) => {
   try {
+    console.log(`[GET] Availability requested by role: ${req.user.role}`);
+
     // Allow both shopkeepers and delivery agents to view
     if (!["delivery_agent", "shopkeeper"].includes(req.user.role)) {
       return res.status(403).json({ msg: 'Forbidden: Unauthorized role.' });
     }
 
-    // If delivery agent → return their own status
     if (req.user.role === 'delivery_agent') {
-      const user = await User.findById(req.user.id).select('-password');
+      const user = await User.findById(req.user.id).select('name isAvailable location');
       if (!user) return res.status(404).json({ msg: 'Delivery agent not found.' });
       return res.status(200).json({
         msg: 'Your availability fetched successfully.',
@@ -54,9 +55,10 @@ app.get('/', auth, async (req, res) => {
       });
     }
 
-    // If shopkeeper → return all delivery agents
+    // Shopkeeper — view all delivery agents
     const agents = await User.find({ role: 'delivery_agent' })
-      .select('name isAvailable location');
+      .select('name email isAvailable location');
+    console.log(`[GET] Shopkeeper fetched ${agents.length} agents`);
     return res.status(200).json({ msg: 'All agents fetched.', agents });
 
   } catch (err) {
@@ -65,7 +67,6 @@ app.get('/', auth, async (req, res) => {
   }
 });
 
-
 /**
  * @route   PATCH /
  * @desc    Update delivery agent availability and location
@@ -73,6 +74,7 @@ app.get('/', auth, async (req, res) => {
  */
 app.patch('/', auth, async (req, res) => {
   try {
+    console.log(`[PATCH] Availability update request from role: ${req.user.role}`);
     if (req.user.role !== 'delivery_agent') {
       return res.status(403).json({ msg: 'Forbidden: Only delivery agents can update availability.' });
     }
@@ -88,7 +90,7 @@ app.patch('/', auth, async (req, res) => {
     if (latitude && longitude) {
       updateData.location = {
         type: 'Point',
-        coordinates: [longitude, latitude], // GeoJSON format
+        coordinates: [longitude, latitude],
       };
     }
 
@@ -102,6 +104,7 @@ app.patch('/', auth, async (req, res) => {
       return res.status(404).json({ msg: 'Delivery agent not found.' });
     }
 
+    console.log(`[PATCH] ${updatedAgent.name} is now ${updatedAgent.isAvailable ? 'Online' : 'Offline'}`);
     res.status(200).json({
       msg: 'Availability updated successfully.',
       agent: updatedAgent,
