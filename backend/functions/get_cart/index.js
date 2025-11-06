@@ -78,4 +78,13 @@ app.get('/', async (req, res) => {
   }
 });
 
+// Export for Cloud Functions compatibility
 exports.get_cart = app;
+
+// If run as a standalone server (e.g. deployed to Cloud Run), start listening on the expected PORT
+if (require.main === module) {
+  const PORT = process.env.PORT || 8080;
+  app.listen(PORT, () => {
+    console.log(`get_cart service listening on port ${PORT}`);
+  });
+}
