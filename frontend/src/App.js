@@ -14,6 +14,7 @@ import AddProduct from "./pages/addProduct";
 import ShopProductList from "./pages/shopproductsview";
 import ShopkeeperEditProducts from "./pages/editProduct";
 import SearchResultsPage from "./pages/SearchResultsPage";
+import ShopProductsPage from "./pages/shopProductsPage";
 function App() {
   return (
     <Router>
@@ -32,6 +33,8 @@ function App() {
         <Route path="/shop-products" element={<ShopProductList />} />
         <Route path="/edit-product/:shopId/:productId" element={<ShopkeeperEditProducts />} />
         <Route path="/search-results" element={<SearchResultsPage />} />
+        <Route path="/shop/:shopId" element={<ShopProductsPage />} />
+
         {/* ...other routes... */}
       </Routes>
     </Router>
