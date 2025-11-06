@@ -209,16 +209,25 @@ export default function SearchResultsPage() {
          {cartMsg}
        </div>
      )}
-      <button 
-        onClick={() => navigate(-1)} 
-        style={{ marginBottom: '20px', padding: '8px 15px', background: primaryColor, color: whiteBg, border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-      >
-        ← Back to Dashboard
-      </button>
-
-      <h1 style={{ fontSize: '2rem', marginBottom: '10px' }}>
-        Search Results for "{searchQuery}"
-      </h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div>
+          <button 
+            onClick={() => navigate(-1)} 
+            style={{ marginBottom: '20px', padding: '8px 15px', background: primaryColor, color: whiteBg, border: 'none', borderRadius: '8px', cursor: 'pointer', marginRight: 10 }}
+          >
+            ← Back to Dashboard
+          </button>
+          <button
+            onClick={() => navigate('/cart')}
+            style={{ marginBottom: '20px', padding: '8px 15px', background: '#19c37d', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+          >
+            🛒 Cart
+          </button>
+        </div>
+        <h1 style={{ fontSize: '2rem', marginBottom: '10px' }}>
+          Search Results for "{searchQuery}"
+        </h1>
+      </div>
       <p style={{ color: '#666', marginBottom: '30px' }}>
         Found {results.length} item(s) in nearby shops.
       </p>

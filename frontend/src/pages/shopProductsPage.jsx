@@ -104,20 +104,39 @@ export default function ShopProductsPage() {
     >
       {/* Add-to-cart feedback */}
       {cartMsg && <div style={{ marginBottom: 12, color: cartMsg.toLowerCase().includes('added') ? 'green' : 'red' }}>{cartMsg}</div>}
-      <button
-        onClick={() => navigate(-1)}
-        style={{
-          background: primaryColor,
-          color: "#fff",
-          border: "none",
-          padding: "10px 15px",
-          borderRadius: "8px",
-          cursor: "pointer",
-          fontWeight: "bold",
-        }}
-      >
-        ← Back
-      </button>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div>
+          <button
+            onClick={() => navigate(-1)}
+            style={{
+              background: primaryColor,
+              color: "#fff",
+              border: "none",
+              padding: "10px 15px",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontWeight: "bold",
+              marginRight: 10
+            }}
+          >
+            ← Back
+          </button>
+          <button
+            onClick={() => navigate('/cart')}
+            style={{
+              background: "#19c37d",
+              color: "#fff",
+              border: "none",
+              padding: "10px 12px",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontWeight: "700"
+            }}
+          >
+            🛒 Cart
+          </button>
+        </div>
+      </div>
 
       <h2 style={{ color: primaryColor, marginTop: "20px" }}>
         {shop.shopName} — Products
