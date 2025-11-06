@@ -1,8 +1,10 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
+
 const connectDB = require('./common/db.js');
 const Cart = require('./common/models/Cart.js');
-const auth = require('./common/authMiddleware.js');
 
 const app = express();
 
@@ -10,11 +12,37 @@ app.use(cors({ origin: true }));
 app.use(express.json());
 
 // GET / -> get current authenticated user's cart details
-app.get('/', auth, async (req, res) => {
-  await connectDB();
+app.get('/', async (req, res) => {
+  // 1) Token extraction (support both Authorization: Bearer <token> and x-auth-token)
+  const authHeader = req.header('authorization') || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  const token = req.header('x-auth-token') || bearerToken;
 
+  if (!token) {
+    return res.status(401).json({ msg: 'No token provided' });
+  }
+
+  // 2) Verify token
+  let decoded;
   try {
-    const userId = req.user.id;
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET not set in environment');
+      return res.status(500).json({ msg: 'Server configuration error: JWT secret missing' });
+    }
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
+  } catch (err) {
+    console.error('Token verification failed:', err);
+    return res.status(401).json({ msg: 'Token is not valid' });
+  }
+
+  // 3) Connect DB and fetch cart
+  try {
+    await connectDB();
+
+    const userId = decoded.id || decoded._id;
+    if (!userId) {
+      return res.status(400).json({ msg: 'Token does not contain user id' });
+    }
 
     // find cart and populate shop info (name, address)
     const cart = await Cart.findOne({ userId }).populate('shopId', 'name address');
@@ -36,7 +64,7 @@ app.get('/', auth, async (req, res) => {
       subtotal += price * qty;
     });
 
-    res.json({
+    return res.json({
       cart,
       totals: {
         totalItems,
@@ -45,11 +73,9 @@ app.get('/', auth, async (req, res) => {
     });
   } catch (err) {
     console.error('Get cart error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    // Return error message to help debugging (remove err.message in production)
+    return res.status(500).json({ msg: 'Server error', error: err.message });
   }
 });
-
-// Optional: endpoint to get cart by user id (admin usage)
-// app.get('/:userId', auth, async (req, res) => { ... });
 
 exports.get_cart = app;
