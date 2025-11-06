@@ -1,5 +1,5 @@
 {
-  "name": "assign_agents",
+  "name": "assign_agent",
   "version": "1.0.0",
   "description": "Service to assign delivery agents",
   "main": "index.js",
