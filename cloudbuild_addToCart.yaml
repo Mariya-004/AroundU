@@ -1,0 +1,30 @@
+# This Cloud Build configuration deploys the 'add_product' Cloud Function (Gen 2)
+
+steps:
+  # --- Step 1: Install dependencies for the add_product function ---
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['install']
+    dir: 'backend/functions/add_to_cart' # Path to the specific Cloud Function
+
+  # --- Step 2: Deploy the Cloud Function to Cloud Functions Gen 2 ---
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'functions'
+      - 'deploy'
+      - 'add_to_cart'
+      - '--gen2'
+      - '--runtime=nodejs22'
+      - '--region=asia-south1'
+      - '--source=backend/functions/add_to_cart' # ✅ No leading './'
+      - '--entry-point=add_to_cart'
+      - '--trigger-http'
+      - '--allow-unauthenticated'
+      - '--timeout=300s'
+      - '--memory=512MB'
+      # ✅ Pass environment variables securely
+      - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET,GCS_BUCKET_NAME=$_GCS_BUCKET_NAME'
+
+# --- Optional: Log only to Cloud Logging (no stdout spam)
+options:
+  logging: CLOUD_LOGGING_ONLY
