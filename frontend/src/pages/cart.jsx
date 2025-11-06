@@ -7,7 +7,6 @@ const neutralBg = '#f9f9f9';
 const whiteBg = '#fff';
 
 const API_GET_CART = 'https://asia-south1-aroundu-473113.cloudfunctions.net/get_cart';
-const API_GET_CART_ALT = 'https://asia-south1-aroundu-473113.cloudfunctions.net/get-cart';
 const API_ADD_TO_CART = 'https://asia-south1-aroundu-473113.cloudfunctions.net/add_to_cart';
 const API_REMOVE_ITEM = 'https://asia-south1-aroundu-473113.cloudfunctions.net/remove-from-cart';
 const API_UPDATE_ITEM = 'https://asia-south1-aroundu-473113.cloudfunctions.net/update-cart'; // optional, implement backend if needed
@@ -29,28 +28,16 @@ export default function CartPage() {
         ? { Authorization: `Bearer ${token}`, 'x-auth-token': token }
         : {};
 
-      // Try primary endpoint first
-      let res = await fetch(API_GET_CART, {
-        method: 'GET',
-        headers
-      });
+      // Call canonical endpoint only (avoid calling non-existing fallback that breaks CORS)
+      const res = await fetch(API_GET_CART, { method: 'GET', headers });
 
-      // If primary returns not-ok (404/500), try the alternative URL (hyphen/underscore mismatch)
       if (!res.ok) {
-        console.warn(`Primary cart endpoint returned ${res.status}, trying fallback...`);
-        res = await fetch(API_GET_CART_ALT, {
-          method: 'GET',
-          headers
-        });
-      }
-
-      // If still not ok, try to parse error body if possible and surface it
-      if (!res.ok) {
+        // Attempt to read error body to show meaningful message
         let errText = `Error fetching cart: ${res.status}`;
         try {
           const errData = await res.json();
           errText = errData.msg || JSON.stringify(errData);
-        } catch (parseErr) {
+        } catch {
           const text = await res.text().catch(() => null);
           if (text) errText = text;
         }
@@ -77,7 +64,8 @@ export default function CartPage() {
       setTotals(data.totals || { totalItems: 0, subtotal: 0 });
     } catch (err) {
       console.error('Fetch cart error', err);
-      setMsg('Failed to load cart. Check console for details.');
+      // Likely network/CORS issue — show explicit guidance
+      setMsg('Failed to load cart. Possible network/CORS error — check browser console and ensure backend allows this origin.');
       setCart(null);
       setTotals({ totalItems: 0, subtotal: 0 });
     } finally {
