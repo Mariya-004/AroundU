@@ -5,21 +5,37 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  role: { type: String, enum: ['customer', 'shopkeeper', 'delivery_agent'], required: true },
+  role: { 
+    type: String, 
+    enum: ['customer', 'shopkeeper', 'delivery_agent'], 
+    required: true 
+  },
+
   location: {
     type: { type: String, enum: ['Point'], default: 'Point' },
-    coordinates: { type: [Number], default: [0, 0] } // Default location field
+    coordinates: { type: [Number], default: [0, 0] } // Default location
   },
-  address: { type: String }, // optional manual address
-  
-  // --- NEW FIELDS ADDED FOR DELIVERY AGENT PROFILE ---
-  phoneNumber: { type: String, unique: true, sparse: true }, // unique constraint, sparse for optionality
-  vehicleType: { type: String, enum: ['bike', 'car', 'van', 'foot'],set: (v) => v ? v.toLowerCase() : v  }, // Example types
-  currentLocation: { // Stores agent's real-time/last reported location (GeoJSON)
+
+  address: { type: String },
+
+  // --- NEW FIELDS FOR DELIVERY AGENT PROFILE ---
+  phoneNumber: { type: String, unique: true, sparse: true },
+  vehicleType: { 
+    type: String, 
+    enum: ['bike', 'car', 'van', 'foot'], 
+    set: (v) => v ? v.toLowerCase() : v  
+  },
+
+  currentLocation: { // For live tracking if needed later
     type: { type: String, enum: ['Point'], default: 'Point' },
-    coordinates: { type: [Number], required: false } // [longitude, latitude]
+    coordinates: { type: [Number], required: false }
+  },
+
+  // ✅ FIX: Add availability field
+  isAvailable: { 
+    type: Boolean, 
+    default: false 
   }
-  // ---------------------------------------------------
 
 }, { timestamps: true });
 
@@ -30,8 +46,8 @@ userSchema.pre('save', async function(next) {
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
-//
-// Create 2dsphere index for delivery agent's current location to enable geo-queries
+
+// Create 2dsphere index for geo-queries
 userSchema.index({ currentLocation: '2dsphere' }, { background: true });
 
 module.exports = mongoose.model('User', userSchema);
