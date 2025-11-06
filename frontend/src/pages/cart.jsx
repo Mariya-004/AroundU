@@ -7,8 +7,10 @@ const neutralBg = '#f9f9f9';
 const whiteBg = '#fff';
 
 const API_GET_CART = 'https://asia-south1-aroundu-473113.cloudfunctions.net/get_cart';
+const API_GET_CART_ALT = 'https://asia-south1-aroundu-473113.cloudfunctions.net/get-cart';
 const API_ADD_TO_CART = 'https://asia-south1-aroundu-473113.cloudfunctions.net/add_to_cart';
-//const API_REMOVE_ITEM = 'https://asia-south1-aroundu-473113.cloudfunctions.net/remove-from-cart'; // implement backend if not present
+// if you don't have a remove-from-cart endpoint, use add_to_cart DELETE (clears whole cart)
+const API_REMOVE_ITEM = 'https://asia-south1-aroundu-473113.cloudfunctions.net/add_to_cart';
 const API_UPDATE_ITEM = 'https://asia-south1-aroundu-473113.cloudfunctions.net/update-cart'; // optional, implement backend if needed
 
 export default function CartPage() {
@@ -24,16 +26,61 @@ export default function CartPage() {
     setMsg('');
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(API_GET_CART, {
+      const headers = token
+        ? { Authorization: `Bearer ${token}`, 'x-auth-token': token }
+        : {};
+
+      // Try primary endpoint first
+      let res = await fetch(API_GET_CART, {
         method: 'GET',
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+        headers
       });
-      const data = await res.json();
+
+      // If primary returns not-ok (404/500), try the alternative URL (hyphen/underscore mismatch)
+      if (!res.ok) {
+        console.warn(`Primary cart endpoint returned ${res.status}, trying fallback...`);
+        res = await fetch(API_GET_CART_ALT, {
+          method: 'GET',
+          headers
+        });
+      }
+
+      // If still not ok, try to parse error body if possible and surface it
+      if (!res.ok) {
+        let errText = `Error fetching cart: ${res.status}`;
+        try {
+          const errData = await res.json();
+          errText = errData.msg || JSON.stringify(errData);
+        } catch (parseErr) {
+          const text = await res.text().catch(() => null);
+          if (text) errText = text;
+        }
+        console.error(errText);
+        setMsg(errText);
+        setCart(null);
+        setTotals({ totalItems: 0, subtotal: 0 });
+        return;
+      }
+
+      // Parse JSON safely
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        console.error('Failed to parse cart JSON response', parseErr);
+        setMsg('Invalid response from server.');
+        setCart(null);
+        setTotals({ totalItems: 0, subtotal: 0 });
+        return;
+      }
+
       setCart(data.cart);
       setTotals(data.totals || { totalItems: 0, subtotal: 0 });
     } catch (err) {
       console.error('Fetch cart error', err);
-      setMsg('Failed to load cart.');
+      setMsg('Failed to load cart. Check console for details.');
+      setCart(null);
+      setTotals({ totalItems: 0, subtotal: 0 });
     } finally {
       setLoading(false);
     }
