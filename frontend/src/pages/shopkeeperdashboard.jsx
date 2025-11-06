@@ -1,16 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-// Define common styles for consistency
-const primaryColor = "#144139"; // Dark green
-const secondaryColor = "#C8A46B"; // Gold/brown
-const successColor = "#19c37d"; // Green for 'In stock'
-const dangerColor = "#dc3545"; // Red for 'Out of stock'
+// --- COLOR SCHEME ---
+const primaryColor = "#144139";
+const secondaryColor = "#C8A46B";
+const successColor = "#19c37d";
+const dangerColor = "#dc3545";
 const neutralBg = "#f9f9f9";
 const whiteBg = "#fff";
 const borderColor = "#e0e0e0";
 
-// FIX: Re-defining the generic actionBtnStyle for use
 const actionBtnStyle = {
   padding: "10px 15px",
   background: primaryColor,
@@ -22,13 +21,11 @@ const actionBtnStyle = {
   transition: "background 0.2s",
 };
 
-const basePadding = "25px"; // Adjust overall padding
-
-// --- Remaining Styles ---
+// --- STYLES ---
 const containerStyle = {
   background: neutralBg,
   minHeight: "100vh",
-  padding: basePadding,
+  padding: "25px",
   fontFamily: "Poppins, sans-serif",
   color: primaryColor,
   display: "flex",
@@ -46,8 +43,6 @@ const shopCardStyle = {
   gap: "20px",
   marginBottom: "20px",
 };
-
-// **REMOVED** shopImagePlaceholderStyle
 
 const tabContainerStyle = {
   display: "flex",
@@ -72,7 +67,6 @@ const searchInputStyle = {
   border: `1px solid ${borderColor}`,
   fontSize: "1rem",
   outline: "none",
-  boxSizing: "border-box",
   background: `${whiteBg} url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%23888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>') no-repeat 10px center`,
   backgroundSize: "20px",
   marginBottom: "15px",
@@ -117,47 +111,47 @@ const floatingButtonStyle = {
   border: "none",
   outline: "none",
   zIndex: 1000,
-  transition: "background 0.2s, transform 0.2s",
 };
 
-// Style for the Profile icon
 const profileIconStyle = {
-  cursor: 'pointer', 
-  color: '#888', 
-  fontSize: '1.4rem',
+  cursor: "pointer",
+  color: "#888",
+  fontSize: "1.4rem",
 };
 
 export default function ShopkeeperProductManager() {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
-  // Removed imageUrl from initial state
-  const [shopInfo, setShopInfo] = useState({ name: "Your Shop", id: null }); 
+  const [shopInfo, setShopInfo] = useState({ name: "Your Shop", id: null });
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("products");
+  const [showAgents, setShowAgents] = useState(false);
+  const [agents, setAgents] = useState([]);
 
-  // --- Data Fetching Logic ---
+  // --- FETCH PRODUCTS ---
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch("https://asia-south1-aroundu-473113.cloudfunctions.net/shop_products", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await fetch(
+          "https://asia-south1-aroundu-473113.cloudfunctions.net/shop_products",
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
         const data = await res.json();
-        if (!res.ok) {
-          setMessage(data.msg || "Failed to fetch products");
-        } else {
-          setShopInfo({ 
-            name: data.shopName || "Your Shop", 
+        if (!res.ok) setMessage(data.msg || "Failed to fetch products");
+        else {
+          setShopInfo({
+            name: data.shopName || "Your Shop",
             id: data.shopId,
-            // Removed handling of data.shopImageUrl
           });
           setProducts(data.products || []);
         }
@@ -167,12 +161,35 @@ export default function ShopkeeperProductManager() {
         setLoading(false);
       }
     };
-
     fetchProducts();
   }, []);
 
+  // --- FETCH DELIVERY AGENT STATUS ---
+  const handleViewAgents = async () => {
+    setShowAgents(!showAgents);
+    if (showAgents) return; // hide if already visible
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        "https://asia-south1-aroundu-473113.cloudfunctions.net/deliveryagent_availability",
+        {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const data = await res.json();
+      if (res.ok) {
+        // Expecting backend to return { agents: [ {name, isAvailable}, ...] }
+        setAgents(data.agents || []);
+      } else {
+        alert(data.msg || "Failed to fetch delivery agents.");
+      }
+    } catch (err) {
+      alert("Server error while fetching agents.");
+    }
+  };
+
   const handleLogout = () => {
-    console.log("Logging out...");
     localStorage.removeItem("token");
     navigate("/login");
   };
@@ -181,28 +198,50 @@ export default function ShopkeeperProductManager() {
     navigate("/shopkeeper-setup-profile");
   };
 
-  const filteredProducts = products.filter(product =>
+  const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div style={containerStyle}>
       {/* Top Bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0' }}>
-        <h1 style={{ fontSize: '1.5rem', color: primaryColor, margin: 0 }}>AroundU Dashboard</h1>
-        
-        {/* Profile Logo and Logout Button */}
-        <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-          <span 
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "10px 0",
+        }}
+      >
+        <h1 style={{ fontSize: "1.5rem", color: primaryColor, margin: 0 }}>
+          AroundU Dashboard
+        </h1>
+
+        {/* Profile + Agents + Logout */}
+        <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
+          <span
             style={profileIconStyle}
             onClick={handleProfileSetup}
             title="Setup Profile"
           >
             👤
           </span>
-          
+
+          {/* NEW BUTTON */}
           <button
-            style={{ ...actionBtnStyle, background: dangerColor, padding: '8px 15px', fontSize: '0.9rem', marginRight: 0 }}
+            style={{ ...actionBtnStyle, background: secondaryColor, color: primaryColor }}
+            onClick={handleViewAgents}
+          >
+            {showAgents ? "Hide Agents" : "View Agents"}
+          </button>
+
+          <button
+            style={{
+              ...actionBtnStyle,
+              background: dangerColor,
+              padding: "8px 15px",
+              fontSize: "0.9rem",
+            }}
             onClick={handleLogout}
           >
             Logout
@@ -210,40 +249,105 @@ export default function ShopkeeperProductManager() {
         </div>
       </div>
 
-      {/* Welcome Message & Shop Card */}
-      <h1 style={{ fontSize: "2rem", color: primaryColor, margin: "0 0 10px 0" }}>
-        Welcome, {shopInfo.name.split(' ')[0]}!
+      {/* Shop Info */}
+      <h1 style={{ fontSize: "2rem", margin: "0 0 10px 0" }}>
+        Welcome, {shopInfo.name.split(" ")[0]}!
       </h1>
       <div style={shopCardStyle}>
-        {/* Removed Shop Image Slot */}
         <div>
-          <h3 style={{ margin: "0 0 5px 0", fontSize: "1.4rem", color: primaryColor }}>
+          <h3 style={{ margin: "0 0 5px 0", fontSize: "1.4rem" }}>
             {shopInfo.name}
           </h3>
-          <p style={{ margin: "0 0 0 0", color: "#666", fontSize: "0.9rem" }}>Grocery Store</p>
-          {/* Removed Shop Timing Line */}
+          <p style={{ margin: "0 0 0 0", color: "#666", fontSize: "0.9rem" }}>
+            Grocery Store
+          </p>
         </div>
       </div>
 
+      {/* Delivery Agents Modal Section */}
+      {showAgents && (
+        <div
+          style={{
+            background: whiteBg,
+            borderRadius: "12px",
+            padding: "20px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+            marginBottom: "20px",
+          }}
+        >
+          <h3 style={{ marginBottom: "15px", color: primaryColor }}>
+            Delivery Agent Availability
+          </h3>
+          {agents.length === 0 ? (
+            <p style={{ color: "#777" }}>No delivery agents found.</p>
+          ) : (
+            <ul style={{ listStyle: "none", padding: 0 }}>
+              {agents.map((agent, i) => (
+                <li
+                  key={i}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    background: neutralBg,
+                    borderRadius: "8px",
+                    padding: "10px 15px",
+                    marginBottom: "10px",
+                  }}
+                >
+                  <span>{agent.name}</span>
+                  <span
+                    style={{
+                      color: agent.isAvailable ? successColor : dangerColor,
+                      fontWeight: "600",
+                    }}
+                  >
+                    {agent.isAvailable ? "🟢 Available" : "🔴 Unavailable"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       {/* Tabs */}
       <div style={tabContainerStyle}>
-        <div style={tabStyle(activeTab === "products")} onClick={() => setActiveTab("products")}>
+        <div
+          style={tabStyle(activeTab === "products")}
+          onClick={() => setActiveTab("products")}
+        >
           Products
         </div>
-        <div style={tabStyle(activeTab === "orders")} onClick={() => setActiveTab("orders")}>
+        <div
+          style={tabStyle(activeTab === "orders")}
+          onClick={() => setActiveTab("orders")}
+        >
           Orders
         </div>
-        <div style={tabStyle(activeTab === "reviews")} onClick={() => setActiveTab("reviews")}>
+        <div
+          style={tabStyle(activeTab === "reviews")}
+          onClick={() => setActiveTab("reviews")}
+        >
           Reviews
         </div>
       </div>
 
-      {/* Content based on active tab */}
+      {/* Product Tab */}
       {activeTab === "products" && (
-        <div style={{ flexGrow: 1, background: whiteBg, borderRadius: "16px", padding: basePadding, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-          <h2 style={{ color: primaryColor, marginBottom: "20px" }}>YOUR PRODUCTS</h2>
+        <div
+          style={{
+            flexGrow: 1,
+            background: whiteBg,
+            borderRadius: "16px",
+            padding: "25px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+          }}
+        >
+          <h2 style={{ color: primaryColor, marginBottom: "20px" }}>
+            YOUR PRODUCTS
+          </h2>
 
-          {/* Search Bar */}
           <div style={{ position: "relative", marginBottom: "20px" }}>
             <input
               type="text"
@@ -254,21 +358,44 @@ export default function ShopkeeperProductManager() {
             />
           </div>
 
-          {/* Status Message */}
           {message && (
-            <p style={{ color: dangerColor, marginBottom: "20px", padding: "10px", background: "#ffebeb", borderRadius: "8px" }}>
+            <p
+              style={{
+                color: dangerColor,
+                marginBottom: "20px",
+                padding: "10px",
+                background: "#ffebeb",
+                borderRadius: "8px",
+              }}
+            >
               {message}
             </p>
           )}
 
-          {/* Loading State */}
-          {loading && <p style={{ textAlign: "center", fontSize: "1.1rem", color: "#777" }}>Loading products...</p>}
+          {loading && (
+            <p style={{ textAlign: "center", color: "#777" }}>
+              Loading products...
+            </p>
+          )}
 
-          {/* Product List */}
           {!loading && filteredProducts.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "50px", border: `1px dashed ${borderColor}`, borderRadius: "12px", background: "#fdfdfd" }}>
+            <div
+              style={{
+                textAlign: "center",
+                padding: "50px",
+                border: `1px dashed ${borderColor}`,
+                borderRadius: "12px",
+                background: "#fdfdfd",
+              }}
+            >
               <h3 style={{ color: "#777" }}>No Products Found</h3>
-              <p>Click the <span style={{ color: secondaryColor, fontWeight: 'bold' }}>+</span> button to add your first item.</p>
+              <p>
+                Click the{" "}
+                <span style={{ color: secondaryColor, fontWeight: "bold" }}>
+                  +
+                </span>{" "}
+                button to add your first item.
+              </p>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -276,17 +403,10 @@ export default function ShopkeeperProductManager() {
                 <div
                   key={product._id}
                   style={productListItemStyle}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateX(5px)";
-                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateX(0)";
-                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.05)";
-                  }}
-                  onClick={() => navigate(`/edit-product/${shopInfo.id}/${product._id}`)}
+                  onClick={() =>
+                    navigate(`/edit-product/${shopInfo.id}/${product._id}`)
+                  }
                 >
-                  {/* Product Image/Placeholder */}
                   {product.imageUrl ? (
                     <img
                       src={product.imageUrl}
@@ -294,17 +414,40 @@ export default function ShopkeeperProductManager() {
                       style={productListImageStyle}
                     />
                   ) : (
-                    <div style={{ ...productListImageStyle, background: "#f0f0f0", display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa', fontSize: '0.7rem' }}>
+                    <div
+                      style={{
+                        ...productListImageStyle,
+                        background: "#f0f0f0",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#aaa",
+                        fontSize: "0.7rem",
+                      }}
+                    >
                       No Image
                     </div>
                   )}
 
-                  {/* Product Details */}
                   <div style={{ flexGrow: 1 }}>
-                    <p style={{ margin: "0 0 3px 0", fontSize: "0.85rem", color: product.stock > 0 ? successColor : dangerColor, fontWeight: "600" }}>
+                    <p
+                      style={{
+                        margin: "0 0 3px 0",
+                        fontSize: "0.85rem",
+                        color:
+                          product.stock > 0 ? successColor : dangerColor,
+                        fontWeight: "600",
+                      }}
+                    >
                       {product.stock > 0 ? "In stock" : "Out of stock"}
                     </p>
-                    <h4 style={{ margin: "0 0 3px 0", fontSize: "1.1rem", color: primaryColor }}>
+                    <h4
+                      style={{
+                        margin: "0 0 3px 0",
+                        fontSize: "1.1rem",
+                        color: primaryColor,
+                      }}
+                    >
                       {product.name}
                     </h4>
                     <p style={{ margin: 0, fontSize: "0.9rem", color: "#777" }}>
@@ -312,9 +455,10 @@ export default function ShopkeeperProductManager() {
                     </p>
                   </div>
 
-                  {/* More Options (Three dots icon - simulated) */}
-                  <div style={{ cursor: 'pointer', padding: '5px', borderRadius: '50%', '&:hover': { background: '#eee' } }}>
-                    <span style={{ fontSize: '1.2rem', color: '#888' }}>&#8942;</span>
+                  <div style={{ cursor: "pointer", padding: "5px" }}>
+                    <span style={{ fontSize: "1.2rem", color: "#888" }}>
+                      &#8942;
+                    </span>
                   </div>
                 </div>
               ))}
@@ -323,25 +467,11 @@ export default function ShopkeeperProductManager() {
         </div>
       )}
 
-      {activeTab === "orders" && (
-        <div style={{ flexGrow: 1, background: whiteBg, borderRadius: "16px", padding: basePadding, boxShadow: "0 4px 12px rgba(0,0,0,0.05)", textAlign: "center", color: "#777" }}>
-          <h2 style={{ color: primaryColor, marginBottom: "20px" }}>Orders</h2>
-          <p>Orders management coming soon!</p>
-        </div>
-      )}
-
-      {activeTab === "reviews" && (
-        <div style={{ flexGrow: 1, background: whiteBg, borderRadius: "16px", padding: basePadding, boxShadow: "0 4px 12px rgba(0,0,0,0.05)", textAlign: "center", color: "#777" }}>
-          <h2 style={{ color: primaryColor, marginBottom: "20px" }}>Reviews</h2>
-          <p>Reviews section coming soon!</p>
-        </div>
-      )}
-
       {/* Floating Add Product Button */}
       <button
         style={floatingButtonStyle}
         onClick={() => navigate("/add-product")}
-        onMouseEnter={(e) => (e.currentTarget.style.background = '#e0b87b')}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "#e0b87b")}
         onMouseLeave={(e) => (e.currentTarget.style.background = secondaryColor)}
       >
         +
