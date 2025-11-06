@@ -86,7 +86,6 @@ export default function ShopProductsPage() {
           shop.products.map((prod) => (
             <div
               key={prod._id}
-              onClick={() => navigate(`/product/${prod._id}`)}
               style={{
                 background: whiteBg,
                 borderRadius: "12px",
@@ -98,6 +97,7 @@ export default function ShopProductsPage() {
               onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.02)")}
               onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1.0)")}
             >
+              {/* Product Image */}
               {prod.imageUrl ? (
                 <img
                   src={prod.imageUrl}
@@ -126,10 +126,45 @@ export default function ShopProductsPage() {
                   No Image
                 </div>
               )}
+
+              {/* Product Info */}
               <h4 style={{ margin: "10px 0 5px 0", color: primaryColor }}>
                 {prod.name}
               </h4>
-              <p style={{ margin: 0, color: "#777" }}>{prod.category || "General"}</p>
+              <p style={{ margin: 0, color: "#777" }}>
+                {prod.category || "General"}
+              </p>
+
+              {/* Product Description */}
+              <p
+                style={{
+                  marginTop: "8px",
+                  color: "#555",
+                  fontSize: "0.9rem",
+                  minHeight: "40px",
+                }}
+              >
+                {prod.description
+                  ? prod.description.length > 60
+                    ? prod.description.slice(0, 60) + "..."
+                    : prod.description
+                  : "No description available."}
+              </p>
+
+              {/* Stock Alert */}
+              {prod.stock < 5 && (
+                <p
+                  style={{
+                    color: "red",
+                    fontWeight: "bold",
+                    marginTop: "5px",
+                  }}
+                >
+                  ⚠️ Running out of stock ({prod.stock} left)
+                </p>
+              )}
+
+              {/* Price */}
               <p
                 style={{
                   marginTop: "5px",
