@@ -10,23 +10,27 @@ const auth = require('./common/authMiddleware.js');
 const app = express();
 connectDB();
 
-// --- FRONTEND ORIGIN (allow production frontend) ---
+// --- FRONTEND ORIGIN (production & local fallback) ---
 const FRONTEND_URL = 'https://aroundu-frontend-164909903360.asia-south1.run.app';
+const LOCAL_URL = 'http://localhost:5173'; // for local dev
 
-// --- CORS Setup (handles preflight too) ---
+// --- CORS ---
 app.use(
   cors({
-    origin: FRONTEND_URL,
+    origin: [FRONTEND_URL, LOCAL_URL],
     methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
   })
 );
-
 app.use(express.json());
 
-// ✅ Handle all preflight OPTIONS requests explicitly
+// ✅ Explicit preflight handler
 app.options('*', (req, res) => {
-  res.set('Access-Control-Allow-Origin', FRONTEND_URL);
+  const origin = req.headers.origin;
+  if ([FRONTEND_URL, LOCAL_URL].includes(origin)) {
+    res.set('Access-Control-Allow-Origin', origin);
+  }
   res.set('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
   res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.status(204).send('');
@@ -34,29 +38,24 @@ app.options('*', (req, res) => {
 
 /**
  * @route   PATCH /shops/:shopId/products/:productId
- * @desc    Update product details of a specific shopkeeper
+ * @desc    Update a product
  * @access  Private (Shopkeeper)
  */
 app.patch('/shops/:shopId/products/:productId', auth, async (req, res) => {
   try {
     if (req.user.role !== 'shopkeeper') {
-      return res.status(403).json({ msg: 'Forbidden: Only shopkeepers can edit products.' });
+      return res.status(403).json({ msg: 'Only shopkeepers can edit products.' });
     }
 
     const { shopId, productId } = req.params;
     const { name, description, price, stock, imageUrl } = req.body;
 
     const shop = await Shop.findOne({ _id: shopId, shopkeeperId: req.user.id });
-    if (!shop) {
-      return res.status(404).json({ msg: 'Shop not found or unauthorized.' });
-    }
+    if (!shop) return res.status(404).json({ msg: 'Shop not found or unauthorized.' });
 
     const product = shop.products.id(productId);
-    if (!product) {
-      return res.status(404).json({ msg: 'Product not found.' });
-    }
+    if (!product) return res.status(404).json({ msg: 'Product not found.' });
 
-    // Update only the provided fields
     if (name !== undefined) product.name = name;
     if (description !== undefined) product.description = description;
     if (price !== undefined) product.price = parseFloat(price);
@@ -65,8 +64,8 @@ app.patch('/shops/:shopId/products/:productId', auth, async (req, res) => {
 
     await shop.save();
 
-    res.status(200).json({
-      msg: 'Product updated successfully!',
+    return res.status(200).json({
+      msg: '✅ Product updated successfully!',
       updatedProduct: product,
     });
   } catch (err) {
@@ -75,5 +74,4 @@ app.patch('/shops/:shopId/products/:productId', auth, async (req, res) => {
   }
 });
 
-// Export for Cloud Function
 exports.edit_product = app;
