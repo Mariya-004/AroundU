@@ -10,7 +10,7 @@ steps:
       - 'gcloud'
       - 'functions'
       - 'deploy'
-      - 'assign_agent'
+      - 'assign_agents'
       - '--gen2'
       - '--runtime=nodejs22'
       - '--region=asia-south1'
