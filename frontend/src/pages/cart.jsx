@@ -9,8 +9,7 @@ const whiteBg = '#fff';
 const API_GET_CART = 'https://asia-south1-aroundu-473113.cloudfunctions.net/get_cart';
 const API_GET_CART_ALT = 'https://asia-south1-aroundu-473113.cloudfunctions.net/get-cart';
 const API_ADD_TO_CART = 'https://asia-south1-aroundu-473113.cloudfunctions.net/add_to_cart';
-// if you don't have a remove-from-cart endpoint, use add_to_cart DELETE (clears whole cart)
-const API_REMOVE_ITEM = 'https://asia-south1-aroundu-473113.cloudfunctions.net/add_to_cart';
+const API_REMOVE_ITEM = 'https://asia-south1-aroundu-473113.cloudfunctions.net/remove-from-cart';
 const API_UPDATE_ITEM = 'https://asia-south1-aroundu-473113.cloudfunctions.net/update-cart'; // optional, implement backend if needed
 
 export default function CartPage() {
@@ -235,11 +234,25 @@ export default function CartPage() {
   return (
     <div style={{ background: neutralBg, minHeight: '100vh', padding: 24, fontFamily: "'Poppins', sans-serif", color: primaryColor }}>
       <div style={{ maxWidth: 960, margin: '0 auto' }}>
+
+        {/* Header: Checkout title + Continue Shopping */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h2 style={{ margin: 0 }}>Your Cart</h2>
+          <h2 style={{ margin: 0 }}>Checkout</h2>
           <div>
-            <button onClick={() => navigate('/')} style={{ marginRight: 12, padding: '8px 14px', borderRadius: 8, border: 'none', background: '#eee', cursor: 'pointer' }}>← Continue Shopping</button>
-            <button onClick={handleClearCart} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#f8d7da', color: '#721c24', cursor: 'pointer' }}>Clear Cart</button>
+            <button
+              onClick={() => navigate('/')}
+              style={{
+                marginRight: 12,
+                padding: '8px 14px',
+                borderRadius: 8,
+                border: 'none',
+                background: '#eee',
+                cursor: 'pointer'
+              }}
+            >
+              ← Continue Shopping
+            </button>
+            {/* Removed the Clear Cart button from header as requested */}
           </div>
         </div>
 
@@ -252,19 +265,22 @@ export default function CartPage() {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24 }}>
             <div>
+              {/* Product list: name, price, quantity, remove button */}
               {cart.products.map((item) => (
                 <div key={item.productId || item._id} style={{ display: 'flex', gap: 16, alignItems: 'center', background: whiteBg, padding: 12, borderRadius: 12, marginBottom: 12, border: '1px solid #eee' }}>
                   <div style={{ width: 90, height: 90, borderRadius: 8, overflow: 'hidden', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {item.imageUrl ? <img src={item.imageUrl} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ color: '#999' }}>No Image</span>}
                   </div>
+
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                       <div>
                         <div style={{ fontWeight: 700 }}>{item.name}</div>
                         <div style={{ color: '#666', fontSize: 14 }}>{item.shopName || (cart.shopId && cart.shopId.name) || ''}</div>
+                        <div style={{ marginTop: 6, color: '#555', fontSize: 13 }}>{item.description || ''}</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ color: secondaryColor, fontWeight: 700 }}>₹ {(item.price || 0).toFixed(2)}</div>
+                        <div style={{ color: secondaryColor, fontWeight: 700, fontSize: 16 }}>₹ {(item.price || 0).toFixed(2)}</div>
                         <div style={{ fontSize: 12, color: '#777' }}>each</div>
                       </div>
                     </div>
@@ -286,6 +302,7 @@ export default function CartPage() {
                         +
                       </button>
 
+                      {/* Clear remove button placed next to quantity */}
                       <button
                         onClick={() => handleRemove(item)}
                         disabled={actionLoading === (item.productId || item._id)}
@@ -300,6 +317,7 @@ export default function CartPage() {
               ))}
             </div>
 
+            {/* Order Summary */}
             <aside style={{ background: whiteBg, padding: 20, borderRadius: 12, height: 'fit-content', border: '1px solid #eee' }}>
               <h3 style={{ marginTop: 0 }}>Order Summary</h3>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
