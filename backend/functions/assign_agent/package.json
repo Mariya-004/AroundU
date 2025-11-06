@@ -4,7 +4,7 @@
   "description": "Service to assign delivery agents",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "functions-framework --target=assign_delivery_agent",
     "dev": "nodemon index.js"
   },
   "dependencies": {
