@@ -12,7 +12,7 @@ steps:
     args:
       - 'functions'
       - 'deploy'
-      - 'add_to_cart'
+      - 'add-to-cart'
       - '--gen2'
       - '--runtime=nodejs22'
       - '--region=asia-south1'
