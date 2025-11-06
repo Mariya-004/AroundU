@@ -8,24 +8,29 @@ const app = express();
 
 const FRONTEND_URL = 'https://aroundu-frontend-164909903360.asia-south1.run.app';
 
-// ✅ 1. CORS middleware (standard)
+// --- 1️⃣ Global CORS Setup (must be FIRST middleware) ---
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', FRONTEND_URL);
+  res.header('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  next();
+});
+
 app.use(cors({
   origin: FRONTEND_URL,
   methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// ✅ 2. Ensure preflight requests are handled BEFORE any routes
+// --- 2️⃣ Preflight Handler ---
 app.options('*', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', FRONTEND_URL);
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.status(204).send('');
 });
 
+// --- 3️⃣ JSON Middleware ---
 app.use(express.json());
 
-// ✅ 3. Add product to cart
+// --- 4️⃣ Add product to cart ---
 app.post('/', auth, async (req, res) => {
   await connectDB();
   const userId = req.user.id;
@@ -39,6 +44,7 @@ app.post('/', auth, async (req, res) => {
     let cart = await Cart.findOne({ userId });
 
     if (cart) {
+      // Prevent mixing shops
       if (cart.shopId.toString() !== shopId.toString()) {
         return res.status(400).json({
           msg: 'Cart contains items from another shop. Clear the cart first.',
@@ -73,13 +79,5 @@ app.post('/', auth, async (req, res) => {
   }
 });
 
-// ✅ 4. Always include CORS headers for any response
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', FRONTEND_URL);
-  res.header('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  next();
-});
-
-// ✅ Export function
+// --- 5️⃣ Export to Cloud Function ---
 exports.add_to_cart = app;
