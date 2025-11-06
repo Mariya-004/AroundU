@@ -15,7 +15,7 @@ steps:
       - '--runtime=nodejs22'
       - '--region=asia-south1'
       - '--source=./backend/functions/accept_reject'
-      - '--entry-point=accept_reject' # Corrected this to match your likely export
+      - '--entry-point=order_status' # Corrected this to match your likely export
       - '--trigger-http'
       - '--allow-unauthenticated'
       # Corrected way to set environment variables for clarity and safety
