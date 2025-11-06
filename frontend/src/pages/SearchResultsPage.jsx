@@ -65,11 +65,13 @@ const addToCartBtnStyle = {
 export default function SearchResultsPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [cartMsg, setCartMsg] = useState('');
+  const [addingProductId, setAddingProductId] = useState(null);
 
   // Extract the query from the URL
   useEffect(() => {
@@ -114,11 +116,81 @@ export default function SearchResultsPage() {
     }
   };
 
-  // Handler for Add to Cart (Conceptual)
-  const handleAddToCart = (productId, shopId) => {
-    console.log(`Adding Product ${productId} from Shop ${shopId} to cart.`);
-    // In a real app, this would dispatch a Redux action or call an API endpoint.
-    alert(`Added product to cart!`);
+  // Add to cart handler: calls add-to-cart API and handles "different shop" case
+  const handleAddToCart = async (product, shopId) => {
+     setCartMsg('');
+     setAddingProductId(product.id || product._id);
+     try {
+       const token = localStorage.getItem("token");
+       if (!token) {
+         setCartMsg('Please log in to add items to cart.');
+         return;
+       }
+ 
+       const body = {
+         shopId,
+         productId: product.id || product._id,
+         name: product.name,
+         price: product.price,
+         imageUrl: product.imageUrl || product.productImageUrl || ''
+       };
+ 
+       const postUrl = 'https://asia-south1-aroundu-473113.cloudfunctions.net/add-to-cart';
+       const res = await fetch(postUrl, {
+         method: 'POST',
+         headers: {
+           'Content-Type': 'application/json',
+           Authorization: `Bearer ${token}`
+         },
+         body: JSON.stringify(body)
+       });
+       const data = await res.json();
+ 
+       if (!res.ok) {
+         // If cart has items from different shop, ask to clear and retry
+         if (res.status === 400 && data.msg && data.msg.toLowerCase().includes('different shop')) {
+           const confirmClear = window.confirm('Your cart contains items from a different shop. Clear the cart and add this item?');
+           if (confirmClear) {
+             // Call DELETE to clear cart, then retry add
+             const delRes = await fetch(postUrl, {
+               method: 'DELETE',
+               headers: { Authorization: `Bearer ${token}` }
+             });
+             if (!delRes.ok) {
+               const delData = await delRes.json().catch(() => ({}));
+               setCartMsg(delData.msg || 'Failed to clear cart.');
+             } else {
+               // Retry adding
+               const retryRes = await fetch(postUrl, {
+                 method: 'POST',
+                 headers: {
+                   'Content-Type': 'application/json',
+                   Authorization: `Bearer ${token}`
+                 },
+                 body: JSON.stringify(body)
+               });
+               const retryData = await retryRes.json();
+               if (!retryRes.ok) {
+                 setCartMsg(retryData.msg || 'Failed to add product after clearing cart.');
+               } else {
+                 setCartMsg('Product added to cart.');
+               }
+             }
+           } else {
+             setCartMsg('Add to cart canceled.');
+           }
+         } else {
+           setCartMsg(data.msg || 'Failed to add product to cart.');
+         }
+       } else {
+         setCartMsg('Product added to cart.');
+       }
+     } catch (err) {
+       console.error('Add to cart error:', err);
+       setCartMsg('Server error while adding to cart.');
+     } finally {
+       setAddingProductId(null);
+     }
   };
 
   return (
@@ -131,6 +203,12 @@ export default function SearchResultsPage() {
         color: primaryColor,
       }}
     >
+     {/* Feedback message for add-to-cart */}
+     {cartMsg && (
+       <div style={{ marginBottom: 16, textAlign: 'center', color: cartMsg.toLowerCase().includes('added') ? 'green' : 'red' }}>
+         {cartMsg}
+       </div>
+     )}
       <button 
         onClick={() => navigate(-1)} 
         style={{ marginBottom: '20px', padding: '8px 15px', background: primaryColor, color: whiteBg, border: 'none', borderRadius: '8px', cursor: 'pointer' }}
@@ -207,9 +285,10 @@ export default function SearchResultsPage() {
               <div style={{ flexShrink: 0, textAlign: 'right' }}>
                 <button
                   style={addToCartBtnStyle}
-                  onClick={() => handleAddToCart(result.product.id || result.product._id, result.shopId)}
+                  onClick={() => handleAddToCart(result.product, result.shopId)}
+                  disabled={addingProductId === (result.product.id || result.product._id)}
                 >
-                  Add to Cart
+                  {addingProductId === (result.product.id || result.product._id) ? 'Adding...' : 'Add to Cart'}
                 </button>
               </div>
             </div>

@@ -15,6 +15,10 @@ export default function ShopProductsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // add-to-cart UI state
+  const [cartMsg, setCartMsg] = useState('');
+  const [addingProductId, setAddingProductId] = useState(null);
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -33,6 +37,51 @@ export default function ShopProductsPage() {
     };
     fetchProducts();
   }, [shopId]);
+
+  // Add to cart handler
+  const handleAddToCart = async (prod) => {
+    setCartMsg('');
+    setAddingProductId(prod._id);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setCartMsg('Please log in to add items to cart.');
+        return;
+      }
+
+      const postUrl = 'https://asia-south1-aroundu-473113.cloudfunctions.net/add-to-cart';
+      const body = {
+        shopId,
+        productId: prod._id,
+        name: prod.name,
+        price: prod.price,
+        imageUrl: prod.imageUrl || ''
+      };
+
+      const res = await fetch(postUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setCartMsg(data.msg || 'Failed to add product to cart.');
+      } else {
+        setCartMsg('Product added to cart.');
+      }
+    } catch (err) {
+      console.error('Add to cart error:', err);
+      setCartMsg('Server error while adding to cart.');
+    } finally {
+      setAddingProductId(null);
+      // auto-clear message after a short delay
+      setTimeout(() => setCartMsg(''), 3000);
+    }
+  };
 
   if (loading)
     return <div style={{ textAlign: "center", marginTop: "20%" }}>Loading...</div>;
@@ -53,6 +102,8 @@ export default function ShopProductsPage() {
         padding: "20px 30px",
       }}
     >
+      {/* Add-to-cart feedback */}
+      {cartMsg && <div style={{ marginBottom: 12, color: cartMsg.toLowerCase().includes('added') ? 'green' : 'red' }}>{cartMsg}</div>}
       <button
         onClick={() => navigate(-1)}
         style={{
@@ -174,6 +225,26 @@ export default function ShopProductsPage() {
               >
                 ₹ {prod.price}
               </p>
+
+              {/* Add to Cart button */}
+              <div style={{ marginTop: 10 }}>
+                <button
+                  onClick={() => handleAddToCart(prod)}
+                  disabled={addingProductId === prod._1d}
+                  style={{
+                    background: "#19c37d",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "10px 14px",
+                    fontWeight: 700,
+                    cursor: addingProductId === prod._id ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {addingProductId === prod._id ? "Adding..." : "Add to Cart"}
+                </button>
+              </div>
+
             </div>
           ))
         )}
