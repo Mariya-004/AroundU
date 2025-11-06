@@ -10,14 +10,27 @@ const auth = require('./common/authMiddleware.js');
 const app = express();
 connectDB();
 
-// --- CORS (allow all during development) ---
-app.use(cors({
-  origin: true,
-  methods: ['PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+// --- FRONTEND ORIGIN (allow production frontend) ---
+const FRONTEND_URL = 'https://aroundu-frontend-164909903360.asia-south1.run.app';
+
+// --- CORS Setup (handles preflight too) ---
+app.use(
+  cors({
+    origin: FRONTEND_URL,
+    methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 
 app.use(express.json());
+
+// ✅ Handle all preflight OPTIONS requests explicitly
+app.options('*', (req, res) => {
+  res.set('Access-Control-Allow-Origin', FRONTEND_URL);
+  res.set('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.status(204).send('');
+});
 
 /**
  * @route   PATCH /shops/:shopId/products/:productId
@@ -43,12 +56,12 @@ app.patch('/shops/:shopId/products/:productId', auth, async (req, res) => {
       return res.status(404).json({ msg: 'Product not found.' });
     }
 
-    // --- Update only the provided fields ---
-    if (name) product.name = name;
-    if (description) product.description = description;
-    if (price) product.price = parseFloat(price);
-    if (stock) product.stock = parseInt(stock, 10);
-    if (imageUrl) product.imageUrl = imageUrl;
+    // Update only the provided fields
+    if (name !== undefined) product.name = name;
+    if (description !== undefined) product.description = description;
+    if (price !== undefined) product.price = parseFloat(price);
+    if (stock !== undefined) product.stock = parseInt(stock, 10);
+    if (imageUrl !== undefined) product.imageUrl = imageUrl;
 
     await shop.save();
 
@@ -56,11 +69,11 @@ app.patch('/shops/:shopId/products/:productId', auth, async (req, res) => {
       msg: 'Product updated successfully!',
       updatedProduct: product,
     });
-
   } catch (err) {
-    console.error('Error updating product:', err.message);
+    console.error('Error updating product:', err);
     res.status(500).json({ msg: 'Server Error', error: err.message });
   }
 });
 
+// Export for Cloud Function
 exports.edit_product = app;
