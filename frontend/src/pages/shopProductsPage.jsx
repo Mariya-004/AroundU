@@ -49,7 +49,7 @@ export default function ShopProductsPage() {
         return;
       }
 
-      const postUrl = 'https://asia-south1-aroundu-473113.cloudfunctions.net/add-to-cart';
+      const postUrl = 'https://asia-south1-aroundu-473113.cloudfunctions.net/add_to_cart';
       const body = {
         shopId,
         productId: prod._id,
