@@ -3,7 +3,7 @@ const cors = require('cors');
 const connectDB = require('./common/db.js');
 const Cart = require('./common/models/Cart.js');
 const auth = require('./common/authMiddleware.js');
-
+const Shop = require('./common/models/Shop.js');
 const app = express();
 
 app.use(cors({ origin: true }));
