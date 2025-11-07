@@ -1,11 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+// --- API ENDPOINTS ---
+const API_GET_PRODUCTS = "https://asia-south1-aroundu-473113.cloudfunctions.net/shop_products";
+const API_GET_AGENTS = "https://asia-south1-aroundu-473113.cloudfunctions.net/deliveryagent_availability";
+const API_GET_SHOP_ORDERS = "https://asia-south1-aroundu-473113.cloudfunctions.net/get_shop_orders";
+
 // --- COLOR SCHEME ---
 const primaryColor = "#144139";
 const secondaryColor = "#C8A46B";
 const successColor = "#19c37d";
 const dangerColor = "#dc3545";
+const warningColor = "#ffc107"; // For pending orders
 const neutralBg = "#f9f9f9";
 const whiteBg = "#fff";
 const borderColor = "#e0e0e0";
@@ -48,6 +54,7 @@ const tabContainerStyle = {
   display: "flex",
   marginBottom: "20px",
   borderBottom: `1px solid ${borderColor}`,
+  overflowX: "auto",
 };
 
 const tabStyle = (isActive) => ({
@@ -119,50 +126,201 @@ const profileIconStyle = {
   fontSize: "1.4rem",
 };
 
+const tabContentStyle = {
+  flexGrow: 1,
+  background: whiteBg,
+  borderRadius: "16px",
+  padding: "25px",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+};
+
+const loadingStyle = {
+  textAlign: "center",
+  color: "#777",
+  padding: "50px",
+};
+
+const emptyStateStyle = {
+  textAlign: "center",
+  padding: "50px",
+  border: `1px dashed ${borderColor}`,
+  borderRadius: "12px",
+  background: "#fdfdfd",
+};
+
+// --- Order Card Component ---
+const OrderCard = ({ order }) => {
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "pending":
+        return warningColor;
+      case "accepted":
+        return primaryColor;
+      case "picked_up":
+        return "#17a2b8"; // Info color
+      case "delivered":
+        return successColor;
+      default:
+        return borderColor;
+    }
+  };
+
+  const statusStyle = {
+    display: "inline-block",
+    padding: "4px 10px",
+    borderRadius: "20px",
+    background: getStatusColor(order.status),
+    color: whiteBg,
+    fontWeight: "600",
+    fontSize: "0.8rem",
+    textTransform: "capitalize",
+    marginBottom: "15px",
+  };
+
+  const orderCardStyle = {
+    background: neutralBg,
+    borderRadius: "12px",
+    padding: "20px",
+    marginBottom: "15px",
+    border: `1px solid ${borderColor}`,
+  };
+
+  const productItemStyle = {
+    display: "flex",
+    justifyContent: "space-between",
+    fontSize: "0.9rem",
+    color: "#555",
+    padding: "5px 0",
+  };
+
+  return (
+    <div style={orderCardStyle}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+        <h4 style={{ margin: 0, fontSize: "1.1rem" }}>
+          Order #{order._id.slice(-6)}
+        </h4>
+        <div style={statusStyle}>{order.status}</div>
+      </div>
+      
+      <div style={{ fontSize: "0.9rem", color: "#666", marginBottom: "15px" }}>
+        <strong>Date:</strong> {new Date(order.createdAt).toLocaleString()}
+        <br />
+        <strong>Customer:</strong> {order.customerId?.name || "N/A"} (
+        {order.customerId?.email || "N/A"})
+        <br />
+        <strong>Address:</strong> {order.deliveryAddress}
+      </div>
+
+      <h5 style={{ margin: "15px 0 5px 0", borderTop: `1px dashed ${borderColor}`, paddingTop: "10px" }}>
+        Items
+      </h5>
+      {order.products.map((item) => (
+        <div key={item.productId} style={productItemStyle}>
+          <span>
+            {item.name} (x{item.quantity})
+          </span>
+          <span style={{ fontWeight: "600" }}>
+            ₹{(item.price * item.quantity).toFixed(2)}
+          </span>
+        </div>
+      ))}
+
+      <div style={{ ...productItemStyle, borderTop: `1px solid ${borderColor}`, marginTop: "10px", paddingTop: "10px" }}>
+        <strong style={{ fontSize: "1.1rem", color: primaryColor }}>Total</strong>
+        <strong style={{ fontSize: "1.1rem", color: primaryColor }}>
+          ₹{order.totalAmount.toFixed(2)}
+        </strong>
+      </div>
+
+      {order.status === 'pending' && (
+        <button style={{ ...actionBtnStyle, marginTop: "15px", width: "100%" }}>
+          Accept Order
+        </button>
+      )}
+    </div>
+  );
+};
+
 export default function ShopkeeperProductManager() {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [shopInfo, setShopInfo] = useState({ name: "Your Shop", id: null });
-  const [loading, setLoading] = useState(true);
+  const [loadingProducts, setLoadingProducts] = useState(true);
   const [message, setMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("products");
+
+  // Agents State
   const [showAgents, setShowAgents] = useState(false);
   const [agents, setAgents] = useState([]);
 
-  // --- FETCH PRODUCTS ---
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(
-          "https://asia-south1-aroundu-473113.cloudfunctions.net/shop_products",
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+  // Orders State
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
 
-        const data = await res.json();
-        if (!res.ok) setMessage(data.msg || "Failed to fetch products");
-        else {
-          setShopInfo({
-            name: data.shopName || "Your Shop",
-            id: data.shopId,
-          });
-          setProducts(data.products || []);
-        }
-      } catch (err) {
-        setMessage("Server error, please try again later");
-      } finally {
-        setLoading(false);
+  // --- FETCH PRODUCTS ---
+  const fetchProducts = async () => {
+    setLoadingProducts(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(API_GET_PRODUCTS, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+      if (!res.ok) setMessage(data.msg || "Failed to fetch products");
+      else {
+        setShopInfo({
+          name: data.shopName || "Your Shop",
+          id: data.shopId,
+        });
+        setProducts(data.products || []);
       }
-    };
+    } catch (err) {
+      setMessage("Server error, please try again later");
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  // --- FETCH ORDERS ---
+  const fetchOrders = async () => {
+    setLoadingOrders(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(API_GET_SHOP_ORDERS, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setOrders(data);
+      } else {
+        setMessage(data.msg || "Failed to fetch orders.");
+      }
+    } catch (err) {
+      setMessage("Server error while fetching orders.");
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  // --- Initial product fetch on mount ---
+  useEffect(() => {
     fetchProducts();
   }, []);
+
+  // --- Fetch data when tab changes ---
+  useEffect(() => {
+    if (activeTab === "orders" && orders.length === 0) {
+      fetchOrders();
+    }
+    // Add logic for other tabs here if needed
+  }, [activeTab]);
 
   // --- FETCH DELIVERY AGENT STATUS ---
   const handleViewAgents = async () => {
@@ -170,16 +328,12 @@ export default function ShopkeeperProductManager() {
     if (showAgents) return; // hide if already visible
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(
-        "https://asia-south1-aroundu-473113.cloudfunctions.net/deliveryagent_availability",
-        {
-          method: "GET",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await fetch(API_GET_AGENTS, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await res.json();
       if (res.ok) {
-        // Expecting backend to return { agents: [ {name, isAvailable}, ...] }
         setAgents(data.agents || []);
       } else {
         alert(data.msg || "Failed to fetch delivery agents.");
@@ -227,7 +381,6 @@ export default function ShopkeeperProductManager() {
             👤
           </span>
 
-          {/* NEW BUTTON */}
           <button
             style={{ ...actionBtnStyle, background: secondaryColor, color: primaryColor }}
             onClick={handleViewAgents}
@@ -333,17 +486,9 @@ export default function ShopkeeperProductManager() {
         </div>
       </div>
 
-      {/* Product Tab */}
+      {/* --- Product Tab --- */}
       {activeTab === "products" && (
-        <div
-          style={{
-            flexGrow: 1,
-            background: whiteBg,
-            borderRadius: "16px",
-            padding: "25px",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-          }}
-        >
+        <div style={tabContentStyle}>
           <h2 style={{ color: primaryColor, marginBottom: "20px" }}>
             YOUR PRODUCTS
           </h2>
@@ -372,22 +517,10 @@ export default function ShopkeeperProductManager() {
             </p>
           )}
 
-          {loading && (
-            <p style={{ textAlign: "center", color: "#777" }}>
-              Loading products...
-            </p>
-          )}
+          {loadingProducts && <p style={loadingStyle}>Loading products...</p>}
 
-          {!loading && filteredProducts.length === 0 ? (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "50px",
-                border: `1px dashed ${borderColor}`,
-                borderRadius: "12px",
-                background: "#fdfdfd",
-              }}
-            >
+          {!loadingProducts && filteredProducts.length === 0 ? (
+            <div style={emptyStateStyle}>
               <h3 style={{ color: "#777" }}>No Products Found</h3>
               <p>
                 Click the{" "}
@@ -464,6 +597,57 @@ export default function ShopkeeperProductManager() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* --- Orders Tab --- */}
+      {activeTab === "orders" && (
+        <div style={tabContentStyle}>
+          <h2 style={{ color: primaryColor, marginBottom: "20px" }}>
+            INCOMING ORDERS
+          </h2>
+
+          {message && (
+            <p
+              style={{
+                color: dangerColor,
+                marginBottom: "20px",
+                padding: "10px",
+                background: "#ffebeb",
+                borderRadius: "8px",
+              }}
+            >
+              {message}
+            </p>
+          )}
+
+          {loadingOrders && <p style={loadingStyle}>Loading orders...</p>}
+
+          {!loadingOrders && orders.length === 0 ? (
+            <div style={emptyStateStyle}>
+              <h3 style={{ color: "#777" }}>No Orders Found</h3>
+              <p>New orders from customers will appear here.</p>
+            </div>
+          ) : (
+            <div>
+              {orders.map((order) => (
+                <OrderCard key={order._id} order={order} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* --- Reviews Tab (Placeholder) --- */}
+      {activeTab === "reviews" && (
+        <div style={tabContentStyle}>
+          <h2 style={{ color: primaryColor, marginBottom: "20px" }}>
+            CUSTOMER REVIEWS
+          </h2>
+          <div style={emptyStateStyle}>
+            <h3 style={{ color: "#777" }}>No Reviews Yet</h3>
+            <p>Customer reviews for your shop will appear here.</p>
+          </div>
         </div>
       )}
 
