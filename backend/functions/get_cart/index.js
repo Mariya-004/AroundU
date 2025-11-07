@@ -5,12 +5,12 @@ require('dotenv').config();
 
 const connectDB = require('./common/db.js');
 const Cart = require('./common/models/Cart.js');
-<<<<<<< HEAD
+
 const auth = require('./common/authMiddleware.js');
 const Shop = require('./common/models/Shop.js');
-=======
 
->>>>>>> 74fb8ef0521dd4360a2679787f8fbaf630631994
+
+
 const app = express();
 
 // --- ✅ Cloud Run/Functions friendly CORS ---
