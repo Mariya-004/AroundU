@@ -100,9 +100,10 @@ export default function CustomerGeoDashboard() {
   const [shops, setShops] = useState([]);
   const [liveLocation, setLiveLocation] = useState(null);
   const [useLiveLocation, setUseLiveLocation] = useState(false);
-  const [mapCenter, setMapCenter] = useState([10.5276, 76.2144]); // Default center (Thrissur)
+  const [mapCenter, setMapCenter] = useState([10.5276, 76.2144]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [cartCount, setCartCount] = useState(0); // 🛒 NEW: cart count
 
   const userName = user?.name || "Customer";
 
@@ -123,13 +124,22 @@ export default function CustomerGeoDashboard() {
     navigate("/login");
   };
 
-  const handleProfileSetup = () => {
-    navigate("/customer-profile");
-  };
+  const handleProfileSetup = () => navigate("/customer-profile");
+  const handleShopClick = (shopId) => navigate(`/shop/${shopId}`);
+  const handleCartClick = () => navigate("/cart"); // 🛒 NEW
 
-  const handleShopClick = (shopId) => {
-    navigate(`/shop/${shopId}`);
-  };
+  // --- 🛒 Sync cart count with localStorage ---
+  useEffect(() => {
+    const updateCartCount = () => {
+      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      const total = cart.reduce((sum, item) => sum + item.quantity, 0);
+      setCartCount(total);
+    };
+
+    updateCartCount();
+    window.addEventListener("storage", updateCartCount);
+    return () => window.removeEventListener("storage", updateCartCount);
+  }, []);
 
   // --- Fetch Shops by Location ---
   const fetchShopsByLocation = async (latitude, longitude) => {
@@ -149,7 +159,7 @@ export default function CustomerGeoDashboard() {
     }
   };
 
-  // --- 1️⃣ Initial Load: Fetch Customer Profile and Shops ---
+  // --- Initial Load: Customer Feed ---
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -189,24 +199,20 @@ export default function CustomerGeoDashboard() {
     fetchInitialData();
   }, []);
 
-  // --- 2️⃣ Live Location Tracking ---
+  // --- Live Location Tracking ---
   useEffect(() => {
     if ("geolocation" in navigator) {
       const watchId = navigator.geolocation.watchPosition(
         async (pos) => {
           const { latitude, longitude } = pos.coords;
           setLiveLocation([latitude, longitude]);
-          if (useLiveLocation) {
-            fetchShopsByLocation(latitude, longitude);
-          }
+          if (useLiveLocation) fetchShopsByLocation(latitude, longitude);
         },
         (err) => console.warn("Live location denied:", err.message),
         { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
       );
 
       return () => navigator.geolocation.clearWatch(watchId);
-    } else {
-      console.warn("Geolocation not supported");
     }
   }, [useLiveLocation]);
 
@@ -259,6 +265,36 @@ export default function CustomerGeoDashboard() {
           <h1 style={{ fontSize: "2rem", margin: 0 }}>Hi {userName.split(" ")[0]} 👋</h1>
 
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            {/* 🛒 Cart Button */}
+            <button
+              onClick={handleCartClick}
+              style={{
+                position: "relative",
+                ...actionBtnStyle,
+                background: secondaryColor,
+                color: primaryColor,
+              }}
+            >
+              🛒 Cart
+              {cartCount > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "-6px",
+                    right: "-6px",
+                    background: dangerColor,
+                    color: "#fff",
+                    borderRadius: "50%",
+                    padding: "2px 6px",
+                    fontSize: "0.75rem",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {cartCount}
+                </span>
+              )}
+            </button>
+
             <button style={logoutBtnStyle} onClick={handleLogout}>
               Logout
             </button>

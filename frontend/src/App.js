@@ -15,6 +15,7 @@ import ShopProductList from "./pages/shopproductsview";
 import ShopkeeperEditProducts from "./pages/editProduct";
 import SearchResultsPage from "./pages/SearchResultsPage";
 import ShopProductsPage from "./pages/shopProductsPage";
+import CustomerCartPage from "./pages/CustomerCartPage";
 function App() {
   return (
     <Router>
@@ -34,6 +35,7 @@ function App() {
         <Route path="/edit-product/:shopId/:productId" element={<ShopkeeperEditProducts />} />
         <Route path="/search-results" element={<SearchResultsPage />} />
         <Route path="/shop/:shopId" element={<ShopProductsPage />} />
+        <Route path="/cart" element={<CustomerCartPage />} />
 
         {/* ...other routes... */}
       </Routes>
