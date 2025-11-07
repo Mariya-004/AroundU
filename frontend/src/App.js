@@ -16,6 +16,7 @@ import ShopkeeperEditProducts from "./pages/editProduct";
 import SearchResultsPage from "./pages/SearchResultsPage";
 import ShopProductsPage from "./pages/shopProductsPage";
 import CartPage from "./pages/cart";
+import Orders from "./pages/orders";
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
         <Route path="/search-results" element={<SearchResultsPage />} />
         <Route path="/shop/:shopId" element={<ShopProductsPage />} />
         <Route path="/cart" element={<CartPage />} />
+        <Route path="/orders" element={<Orders />} />
 
 
       </Routes>

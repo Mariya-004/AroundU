@@ -242,7 +242,7 @@ export default function CartPage() {
                 setMsg(data.msg || 'Failed to place order.');
             } else {
                 // success - navigate to a confirmation page or show success message
-                navigate('/order-success');
+                navigate('/orders');
             }
         } catch (err) {
             console.error('Place order error', err);
