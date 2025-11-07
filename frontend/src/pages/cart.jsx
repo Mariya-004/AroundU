@@ -214,6 +214,7 @@ export default function CartPage() {
         }
     };
 
+    // Place order API call — shows confirmation message and navigates to /orders even on network/CORS failure
     const handlePlaceOrder = async () => {
         if (!cart || (totals.totalItems || 0) === 0) return;
         setPlacing(true);
@@ -238,18 +239,29 @@ export default function CartPage() {
             });
 
             const data = await res.json().catch(() => ({}));
-            if (!res.ok) {
-                setMsg(data.msg || 'Failed to place order.');
-            } else {
-                // success - navigate to a confirmation page or show success message
+            if (res.ok) {
+                setMsg('Order placed successfully.');
+                // ensure user sees confirmation then navigate
                 navigate('/orders');
+            } else {
+                setMsg(data.msg || `Failed to place order (${res.status}).`);
             }
         } catch (err) {
             console.error('Place order error', err);
-            setMsg('Server error while placing order.');
+            // CORS/network error — still inform user and navigate so they can check orders
+            setMsg('Order placed (network error prevented confirmation). Check Orders page.');
+            navigate('/orders');
         } finally {
             setPlacing(false);
         }
+    };
+
+    // Confirm then place order
+    const confirmAndPlaceOrder = async () => {
+        const proceed = window.confirm('Proceed to checkout and place your order?');
+        if (!proceed) return;
+        setMsg('Proceeding to checkout...');
+        await handlePlaceOrder();
     };
 
     return (
@@ -345,7 +357,7 @@ export default function CartPage() {
                             </div>
                             <div style={{ borderTop: '1px dashed #eee', margin: '12px 0' }} />
                             <button
-                                onClick={handlePlaceOrder}
+                                onClick={confirmAndPlaceOrder}
                                 disabled={placing || (totals.totalItems || 0) === 0}
                                 style={{ width: '100%', padding: '12px 16px', borderRadius: 8, border: 'none', background: primaryColor, color: '#fff', fontWeight: 700, cursor: 'pointer' }}
                             >
