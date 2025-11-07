@@ -4,7 +4,7 @@ steps:
   # --- Step 1: Install dependencies for the get_shop_orders function ---
   - name: 'gcr.io/cloud-builders/npm'
     args: ['install']
-    dir: 'backend/functions/get_shop_orders' # Path to your function folder
+    dir: 'backend/functions/shopkeeper_get_orders' # Path to your function folder
 
   # --- Step 2: Deploy the Cloud Function to Cloud Functions Gen 2 ---
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
