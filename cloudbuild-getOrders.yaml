@@ -1,0 +1,33 @@
+# This Cloud Build configuration deploys the 'get_shop_orders' Cloud Function (Gen 2)
+
+steps:
+  # --- Step 1: Install dependencies for the get_shop_orders function ---
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['install']
+    dir: 'backend/functions/get_shop_orders' # Path to your function folder
+
+  # --- Step 2: Deploy the Cloud Function to Cloud Functions Gen 2 ---
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'functions'
+      - 'deploy'
+      - 'get_shop_orders'
+      - '--gen2'
+      - '--runtime=nodejs22'
+      - '--region=asia-south1'
+      - '--source=backend/functions/shopkeeper_get_orders' # ✅ correct source path
+      - '--entry-point=get_shop_orders'
+      - '--trigger-http'
+      - '--allow-unauthenticated'
+      - '--timeout=300s'
+      - '--memory=512MB'
+      - '--set-env-vars'
+      - |
+        MONGO_URI=${_MONGO_URI},
+        JWT_SECRET=${_JWT_SECRET},
+        GCS_BUCKET_NAME=${_GCS_BUCKET_NAME}
+
+# --- Optional: Log only to Cloud Logging (no stdout spam)
+options:
+  logging: CLOUD_LOGGING_ONLY
