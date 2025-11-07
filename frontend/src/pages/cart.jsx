@@ -10,6 +10,7 @@ const API_GET_CART = 'https://asia-south1-aroundu-473113.cloudfunctions.net/get_
 const API_ADD_TO_CART = 'https://asia-south1-aroundu-473113.cloudfunctions.net/add_to_cart';
 const API_REMOVE_ITEM = 'https://asia-south1-aroundu-473113.cloudfunctions.net/remove-from-cart';
 const API_UPDATE_ITEM = 'https://asia-south1-aroundu-473113.cloudfunctions.net/update-cart'; // optional
+const API_PLACE_ORDER = 'https://asia-south1-aroundu-473113.cloudfunctions.net/checkout'; // place-order API
 
 export default function CartPage() {
     const navigate = useNavigate();
@@ -18,6 +19,7 @@ export default function CartPage() {
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(null); // productId being modified
     const [msg, setMsg] = useState('');
+    const [placing, setPlacing] = useState(false);
 
     const fetchCart = async () => {
         setLoading(true);
@@ -212,8 +214,42 @@ export default function CartPage() {
         }
     };
 
-    const handleCheckout = () => {
-        navigate('/checkout');
+    const handlePlaceOrder = async () => {
+        if (!cart || (totals.totalItems || 0) === 0) return;
+        setPlacing(true);
+        setMsg('');
+        try {
+            const token = localStorage.getItem('token');
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {})
+            };
+
+            const body = {
+                cartId: cart._id || null,
+                items: cart.products || [],
+                totals
+            };
+
+            const res = await fetch(API_PLACE_ORDER, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(body)
+            });
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                setMsg(data.msg || 'Failed to place order.');
+            } else {
+                // success - navigate to a confirmation page or show success message
+                navigate('/order-success');
+            }
+        } catch (err) {
+            console.error('Place order error', err);
+            setMsg('Server error while placing order.');
+        } finally {
+            setPlacing(false);
+        }
     };
 
     return (
@@ -309,11 +345,11 @@ export default function CartPage() {
                             </div>
                             <div style={{ borderTop: '1px dashed #eee', margin: '12px 0' }} />
                             <button
-                                onClick={handleCheckout}
-                                disabled={(totals.totalItems || 0) === 0}
+                                onClick={handlePlaceOrder}
+                                disabled={placing || (totals.totalItems || 0) === 0}
                                 style={{ width: '100%', padding: '12px 16px', borderRadius: 8, border: 'none', background: primaryColor, color: '#fff', fontWeight: 700, cursor: 'pointer' }}
                             >
-                                Proceed to Checkout
+                                {placing ? 'Placing...' : 'Place Order'}
                             </button>
                         </aside>
                     </div>
