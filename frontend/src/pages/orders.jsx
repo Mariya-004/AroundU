@@ -6,7 +6,7 @@ const neutralBg = '#f9f9f9';
 const whiteBg = '#fff';
 
 const API_GET_ORDERS = 'https://asia-south1-aroundu-473113.cloudfunctions.net/get_customer_orders';
-const API_GET_STATUS = 'https://asia-south1-aroundu-473113.cloudfunctions.net/get_status'; // new: get-status endpoint
+const API_GET_STATUS = 'https://asia-south1-aroundu-473113.cloudfunctions.net/get_status';
 
 export default function OrdersPage() {
   const navigate = useNavigate();
@@ -29,7 +29,6 @@ export default function OrdersPage() {
         const data = await res.json();
         const fetched = data.orders || data || [];
         setOrders(fetched);
-        // fetch latest status for each order
         await fetchStatuses(fetched, headers);
       } catch (e) {
         console.error('Fetch orders error', e);
@@ -39,33 +38,56 @@ export default function OrdersPage() {
       }
     };
 
-    // fetch orders + statuses
     fetchOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // fetch status for each order in parallel and update state
+  // Try POST first, fallback to GET with query param
   const fetchStatuses = async (ordersList, headers = {}) => {
     if (!ordersList || ordersList.length === 0) return;
     try {
-      const statusPromises = ordersList.map(async (order) => {
+      const promises = ordersList.map(async (order) => {
         const id = order._id || order.id;
         if (!id) return order;
+
+        // Attempt POST
+        try {
+          const res = await fetch(API_GET_STATUS, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...headers,
+            },
+            body: JSON.stringify({ orderId: id }),
+          });
+
+          if (res.ok) {
+            const data = await res.json().catch(() => null);
+            if (data && data.status) return { ...order, status: data.status };
+            return order;
+          }
+
+          // If POST fails with method not allowed or not found, try GET below
+          if (res.status === 405 || res.status === 404) throw new Error('POST not supported');
+          // for other non-ok statuses, fall through to GET fallback
+        } catch (postErr) {
+          // fallback to GET
+        }
+
+        // GET fallback
         try {
           const url = `${API_GET_STATUS}?orderId=${encodeURIComponent(id)}`;
-          const res = await fetch(url, { method: 'GET', headers });
-          if (!res.ok) return order;
-          const data = await res.json().catch(() => null);
-          if (data && data.status) {
-            return { ...order, status: data.status };
-          }
+          const res2 = await fetch(url, { method: 'GET', headers });
+          if (!res2.ok) return order;
+          const data2 = await res2.json().catch(() => null);
+          if (data2 && data2.status) return { ...order, status: data2.status };
           return order;
-        } catch (e) {
+        } catch (getErr) {
           return order;
         }
       });
 
-      const updated = await Promise.all(statusPromises);
+      const updated = await Promise.all(promises);
       setOrders(updated);
     } catch (e) {
       console.error('Error fetching statuses', e);
@@ -162,9 +184,7 @@ export default function OrdersPage() {
                 </button>
 
                 <button
-                  onClick={() =>
-                    navigate('/track-order', { state: { orderId: order._id || order.id } })
-                  }
+                  onClick={() => navigate('/track-order', { state: { orderId: order._id || order.id } })}
                   style={{
                     padding: '8px 12px',
                     borderRadius: 8,
