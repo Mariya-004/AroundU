@@ -2,7 +2,7 @@ steps:
   # Step 1: Install dependencies
   - name: 'gcr.io/cloud-builders/npm'
     args: ['install']
-    dir: 'backend/functions/assign_agent'
+    dir: 'backend/functions/deliveryagent_accept_reject'
 
   # Step 2: Deploy the function
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -10,12 +10,12 @@ steps:
       - 'gcloud'
       - 'functions'
       - 'deploy'
-      - 'assign_agents'
+      - 'deliveryagent_accept_reject'
       - '--gen2'
       - '--runtime=nodejs22'
       - '--region=asia-south1'
-      - '--source=./backend/functions/assign_agent'
-      - '--entry-point=assign_delivery_agent' # Corrected this to match your likely export
+      - '--source=./backend/functions/deliveryagent_accept_reject'
+      - '--entry-point=deliveryagent_orderstatus' # Corrected this to match your likely export
       - '--trigger-http'
       - '--allow-unauthenticated'
       # Corrected way to set environment variables for clarity and safety

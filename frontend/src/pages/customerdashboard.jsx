@@ -299,6 +299,22 @@ export default function CustomerGeoDashboard() {
               Logout
             </button>
 
+            <button
+              onClick={() => navigate('/cart')}
+              style={{
+                padding: "10px 14px",
+                borderRadius: "8px",
+                border: "none",
+                background: "#19c37d",
+                color: "#fff",
+                cursor: "pointer",
+                fontWeight: "700",
+                marginRight: "8px"
+              }}
+            >
+              🛒 Cart
+            </button>
+
             <div
               style={{
                 width: "40px",
@@ -377,32 +393,34 @@ export default function CustomerGeoDashboard() {
               No shops found within {searchRadius} km of your location.
             </p>
           ) : (
-            shops.map((shop) => (
-              <div
-                key={shop._id}
-                style={shopListItemStyle}
-                onClick={() => handleShopClick(shop._id)}
-              >
-                <div style={shopListImageStyle}>{getInitials(shop.name)}</div>
-                <div style={{ flexGrow: 1, overflow: "hidden" }}>
-                  <h4
-                    style={{
-                      margin: "0 0 3px 0",
-                      fontSize: "1rem",
-                      color: primaryColor,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {shop.name}
-                  </h4>
-                  <p style={{ margin: 0, fontSize: "0.8rem", color: "#666" }}>
-                    {shop.category || "General Store"}
-                  </p>
+            <>
+              {shops.map((shop) => (
+                <div
+                  key={shop._id}
+                  style={shopListItemStyle}
+                  onClick={() => handleShopClick(shop._id)}
+                >
+                  <div style={shopListImageStyle}>{getInitials(shop.name)}</div>
+                  <div style={{ flexGrow: 1, overflow: "hidden" }}>
+                    <h4
+                      style={{
+                        margin: "0 0 3px 0",
+                        fontSize: "1rem",
+                        color: primaryColor,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {shop.name}
+                    </h4>
+                    <p style={{ margin: 0, fontSize: "0.8rem", color: "#666" }}>
+                      {shop.category || "General Store"}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))
+              ))}
+            </>
           )}
         </div>
 

@@ -1,32 +1,62 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
+
 const connectDB = require('./common/db.js');
 const Cart = require('./common/models/Cart.js');
+<<<<<<< HEAD
 const auth = require('./common/authMiddleware.js');
 const Shop = require('./common/models/Shop.js');
+=======
+
+>>>>>>> 74fb8ef0521dd4360a2679787f8fbaf630631994
 const app = express();
 
+// --- ✅ Cloud Run/Functions friendly CORS ---
 app.use(cors({ origin: true }));
 app.use(express.json());
 
-// GET / -> get current authenticated user's cart details
-app.get('/', auth, async (req, res) => {
-  await connectDB();
+// --- ✅ GET / — fetch current user's cart ---
+app.get('/', async (req, res) => {
+  const authHeader = req.header('authorization') || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  const token = req.header('x-auth-token') || bearerToken;
 
+  if (!token) {
+    return res.status(401).json({ msg: 'No token provided' });
+  }
+
+  // Verify token
+  let decoded;
   try {
-    const userId = req.user.id;
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET not set in environment');
+      return res.status(500).json({ msg: 'Server configuration error: JWT secret missing' });
+    }
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
+  } catch (err) {
+    console.error('Token verification failed:', err);
+    return res.status(401).json({ msg: 'Token is not valid' });
+  }
 
-    // find cart and populate shop info (name, address)
+  // Connect to DB and fetch user's cart
+  try {
+    await connectDB();
+    const userId = decoded.id || decoded._id;
+    if (!userId) {
+      return res.status(400).json({ msg: 'Token does not contain user id' });
+    }
+
     const cart = await Cart.findOne({ userId }).populate('shopId', 'name address');
 
     if (!cart) {
       return res.json({
         cart: null,
-        totals: { totalItems: 0, subtotal: 0 }
+        totals: { totalItems: 0, subtotal: 0 },
       });
     }
 
-    // compute totals
     let totalItems = 0;
     let subtotal = 0;
     cart.products.forEach((p) => {
@@ -36,20 +66,21 @@ app.get('/', auth, async (req, res) => {
       subtotal += price * qty;
     });
 
-    res.json({
+    return res.json({
       cart,
-      totals: {
-        totalItems,
-        subtotal
-      }
+      totals: { totalItems, subtotal },
     });
   } catch (err) {
     console.error('Get cart error:', err);
-    res.status(500).json({ msg: 'Server error' });
+    return res.status(500).json({ msg: 'Server error', error: err.message });
   }
 });
 
-// Optional: endpoint to get cart by user id (admin usage)
-// app.get('/:userId', auth, async (req, res) => { ... });
-
+// --- ✅ Export for Cloud Functions ---
 exports.get_cart = app;
+
+// --- ✅ Run locally when not deployed ---
+if (!process.env.FUNCTION_TARGET) {
+  const PORT = process.env.PORT || 8080;
+  app.listen(PORT, () => console.log(`get_cart service listening on port ${PORT}`));
+}
