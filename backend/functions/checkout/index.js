@@ -8,7 +8,8 @@ const auth = require('./common/authMiddleware.js');
 const Cart = require('./common/models/Cart.js');
 const Shop = require('./common/models/Shop.js');
 const Order = require('./common/models/Order.js');
-// We don't need the User model, as auth middleware gives us the ID
+// Add User model import so we can read saved location/address
+const User = require('./common/models/User.js');
 
 const app = express();
 
@@ -22,12 +23,33 @@ app.use(express.json());
 app.post('/', auth, async (req, res) => {
   await connectDB();
 
-  const { deliveryAddress } = req.body;
   const customerId = req.user.id;
 
-  // 1. Validation: Check for delivery address
-  if (!deliveryAddress || deliveryAddress.trim() === '') {
-    return res.status(400).json({ msg: 'Delivery address is required.' });
+  // --- Retrieve deliveryAddress from user profile (prefer address, fallback to location coordinates) ---
+  let deliveryAddress = null;
+  try {
+    const user = await User.findById(customerId).select('location address').lean();
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found.' });
+    }
+
+    // Prefer human-readable address if provided
+    if (user.address && typeof user.address === 'string' && user.address.trim() !== '') {
+      deliveryAddress = user.address.trim();
+    } else if (user.location && Array.isArray(user.location.coordinates) && user.location.coordinates.length === 2) {
+      const [lng, lat] = user.location.coordinates;
+      // Treat schema default [0,0] as "not set"
+      if (lng === 0 && lat === 0) {
+        return res.status(400).json({ msg: 'Delivery location not set in user profile. Please set your location before checkout.' });
+      }
+      // Use a simple lat,lng string as deliveryAddress
+      deliveryAddress = `${lat},${lng}`;
+    } else {
+      return res.status(400).json({ msg: 'Delivery address not set in user profile. Please set your address or location before checkout.' });
+    }
+  } catch (err) {
+    console.error('Error fetching user location:', err);
+    return res.status(500).json({ msg: 'Server error fetching user profile.' });
   }
 
   // 2. Get the user's cart
@@ -97,7 +119,7 @@ app.post('/', auth, async (req, res) => {
       products: orderProducts,
       totalAmount: totalAmount,
       status: 'pending',
-      deliveryAddress: deliveryAddress,
+      deliveryAddress: deliveryAddress, // use location from User schema
     });
     
     // Save the order *within the transaction*
