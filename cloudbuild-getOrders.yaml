@@ -19,13 +19,11 @@ steps:
       - '--source=./backend/functions/shopkeeper_get_orders' # ✅ correct source path
       - '--entry-point=get_shop_orders'
       - '--trigger-http'
+      - '--allow-unauthenticated'
       - '--timeout=300s'
       - '--memory=512MB'
       - '--set-env-vars'
-      - |
-        MONGO_URI=${_MONGO_URI},
-        JWT_SECRET=${_JWT_SECRET},
-        GCS_BUCKET_NAME=${_GCS_BUCKET_NAME}
+      - '--set-env-vars=MONGO_URI=$_MONGO_URI,JWT_SECRET=$_JWT_SECRET,GCS_BUCKET_NAME=$_GCS_BUCKET_NAME'
 
 # --- Optional: Log only to Cloud Logging (no stdout spam)
 options:
