@@ -16,10 +16,9 @@ steps:
       - '--gen2'
       - '--runtime=nodejs22'
       - '--region=asia-south1'
-      - '--source=backend/functions/shopkeeper_get_orders' # ✅ correct source path
+      - '--source=./backend/functions/shopkeeper_get_orders' # ✅ correct source path
       - '--entry-point=get_shop_orders'
       - '--trigger-http'
-      - '--allow-unauthenticated'
       - '--timeout=300s'
       - '--memory=512MB'
       - '--set-env-vars'

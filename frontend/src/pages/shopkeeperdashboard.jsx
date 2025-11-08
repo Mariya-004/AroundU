@@ -6,7 +6,7 @@ const API_GET_PRODUCTS = "https://asia-south1-aroundu-473113.cloudfunctions.net/
 const API_GET_AGENTS = "https://asia-south1-aroundu-473113.cloudfunctions.net/deliveryagent_availability";
 const API_GET_SHOP_ORDERS = "https://asia-south1-aroundu-473113.cloudfunctions.net/get_shop_orders";
 
-// --- COLOR SCHEME ---
+// --- COLOR SCHEME --- 
 const primaryColor = "#144139";
 const secondaryColor = "#C8A46B";
 const successColor = "#19c37d";
