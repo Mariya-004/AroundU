@@ -17,6 +17,7 @@ const CUSTOMER_FEED_API =
   "https://asia-south1-aroundu-473113.cloudfunctions.net/customer-feed";
 const NEARBY_SHOPS_API =
   "https://asia-south1-aroundu-473113.cloudfunctions.net/nearby-shops";
+const API_GET_STATUS = "https://asia-south1-aroundu-473113.cloudfunctions.net/get_status";
 
 // --- Button Styles ---
 const actionBtnStyle = {
@@ -128,11 +129,37 @@ export default function CustomerGeoDashboard() {
   const handleShopClick = (shopId) => navigate(`/shop/${shopId}`);
   const handleCartClick = () => navigate("/cart"); // 🛒 NEW
 
+  // --- Fetch orders via get_status and navigate to Orders page ---
+  const handleYourOrders = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const token = localStorage.getItem("token");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch(API_GET_STATUS, { method: "GET", headers });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const msg = data.msg || `Failed to fetch orders (${res.status})`;
+        throw new Error(msg);
+      }
+      const data = await res.json().catch(() => ({}));
+      // pass orders to orders page via navigation state
+      const orders = data.orders || data || [];
+      navigate("/orders", { state: { orders } });
+    } catch (err) {
+      console.error("Fetch orders error:", err);
+      // navigate to orders page with error so UI can show fallback
+      navigate("/orders", { state: { error: err.message || "Failed to fetch orders" } });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // --- 🛒 Sync cart count with localStorage ---
   useEffect(() => {
     const updateCartCount = () => {
       const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-      const total = cart.reduce((sum, item) => sum + item.quantity, 0);
+      const total = cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
       setCartCount(total);
     };
 
@@ -265,7 +292,7 @@ export default function CustomerGeoDashboard() {
           <h1 style={{ fontSize: "2rem", margin: 0 }}>Hi {userName.split(" ")[0]} 👋</h1>
 
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-            {/* 🛒 Cart Button */}
+            {/* Single Cart Button */}
             <button
               onClick={handleCartClick}
               style={{
@@ -295,24 +322,21 @@ export default function CustomerGeoDashboard() {
               )}
             </button>
 
-            <button style={logoutBtnStyle} onClick={handleLogout}>
-              Logout
-            </button>
-
+            {/* Your Orders Button - calls get_status */}
             <button
-              onClick={() => navigate('/cart')}
+              onClick={handleYourOrders}
               style={{
-                padding: "10px 14px",
-                borderRadius: "8px",
-                border: "none",
+                ...actionBtnStyle,
                 background: "#19c37d",
                 color: "#fff",
-                cursor: "pointer",
-                fontWeight: "700",
-                marginRight: "8px"
+                padding: "10px 14px",
               }}
             >
-              🛒 Cart
+              Your Orders
+            </button>
+
+            <button style={logoutBtnStyle} onClick={handleLogout}>
+              Logout
             </button>
 
             <div
@@ -506,3 +530,5 @@ export default function CustomerGeoDashboard() {
     </div>
   );
 }
+
+ 
